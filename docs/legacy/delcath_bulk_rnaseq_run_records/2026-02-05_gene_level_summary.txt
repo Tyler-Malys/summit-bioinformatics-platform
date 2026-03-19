@@ -1,0 +1,16 @@
+[Thu Feb  5 13:26:06 EST 2026] Gene-level outputs:
+  - gene.counts.tsv (54347 genes)
+  - gene.counts.expressed_cpm1.tsv (13012 genes; keep any CPM>=1 in >=1 sample)
+QC:
+  - Library sizes: ~44.23M vs ~41.98M
+  - Replicate concordance (all genes): Pearson 0.9968, Spearman 0.9335
+  - Replicate concordance (expressed only): Pearson 0.9894, Spearman 0.9886
+[Thu Feb  5 14:11:21 EST 2026] DESeq2 installed (v1.34.0) and scaffold built:
+  - results/gene/dds.rds
+  - results/gene/vst.rds
+  - size factors: 1.0161441, 0.9841124
+  - VST correlations: Pearson 0.9946931, Spearman 0.9886236
+[Thu Feb  5 14:28:42 EST 2026] Exploratory analysis complete:
+  - DESeq2 PCA generated
+  - Sample distance heatmap generated
+  - Replicates show high concordance

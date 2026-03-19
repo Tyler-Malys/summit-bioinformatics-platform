@@ -1,0 +1,2 @@
+run_id	sample_id	dataset	fastq_path	reference	chemistry	expected_cells	notes
+pbmc_1k_v3_GRCh38g49	pbmc_1k_v3	pbmc_1k_v3_demo	/home/summitadmin/bioinformatics_projects/delcath_scrnaseq_dev_2026-03/data/fastq/pbmc_1k_v3/pbmc_1k_v3_fastqs	GRCh38_gencode_v49	10x_v3	1000	Reference dataset used to validate pipeline and Cell Ranger configuration

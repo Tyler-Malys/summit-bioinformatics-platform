@@ -1,0 +1,44 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Large derived outputs
+results/
+analysis_objects/
+cache/
+tmp/
+temp/
+
+# Raw sequencing data
+data/
+fastq/
+FASTQ/
+*.fastq
+*.fastq.gz
+*.fq.gz
+*.bam
+*.bai
+*.cram
+*.crai
+
+# References / indexes (usually large)
+ref/
+references/
+genome/
+salmon_index*/
+star_index*/
+
+# R artifacts
+.Rhistory
+.RData
+.Rproj.user/
+
+# Python cache
+__pycache__/
+*.pyc
+logs/
+star_pilot/
+logs/

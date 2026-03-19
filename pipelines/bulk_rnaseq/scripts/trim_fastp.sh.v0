@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage:
+# trim_fastp.sh <input_dir> <out_dir> [threads]
+# Expects paired-end naming:
+#   *_1.fq.gz / *_2.fq.gz
+#   *_1.fastq.gz / *_2.fastq.gz
+
+INPUT_DIR="${1:?Usage: trim_fastp.sh <input_dir> <out_dir> [threads]}"
+OUT_DIR="${2:?Usage: trim_fastp.sh <input_dir> <out_dir> [threads]}"
+THREADS="${3:-8}"
+
+mkdir -p "$OUT_DIR" "$OUT_DIR/reports"
+
+echo "=== fastp trimming ==="
+date
+echo "INPUT_DIR=$INPUT_DIR"
+echo "OUT_DIR=$OUT_DIR"
+echo "THREADS=$THREADS"
+command -v fastp >/dev/null || { echo "ERROR: fastp not found in PATH" >&2; exit 127; }
+
+shopt -s nullglob
+R1S=("$INPUT_DIR"/*_1.fq.gz "$INPUT_DIR"/*_1.fastq.gz)
+
+if [ ${#R1S[@]} -eq 0 ]; then
+  echo "ERROR: No *_1.fq.gz or *_1.fastq.gz files found in $INPUT_DIR" >&2
+  exit 2
+fi
+
+for R1 in "${R1S[@]}"; do
+
+  case "$R1" in
+    *_1.fq.gz)    R2="${R1%_1.fq.gz}_2.fq.gz" ;;
+    *_1.fastq.gz) R2="${R1%_1.fastq.gz}_2.fastq.gz" ;;
+    *) echo "ERROR: Unexpected R1 filename pattern: $R1" >&2; exit 4 ;;
+  esac
+
+  if [ ! -f "$R2" ]; then
+    echo "ERROR: Missing R2 for $R1 (expected $R2)" >&2
+    exit 3
+  fi
+
+  base="$(basename "$R1")"
+  sample="${base%_1.fq.gz}"
+  sample="${sample%_1.fastq.gz}"
+
+   if [[ "$R1" == *_1.fastq.gz ]]; then
+    outR1="$OUT_DIR/${sample}_1.fastq.gz"
+    outR2="$OUT_DIR/${sample}_2.fastq.gz"
+  else
+    outR1="$OUT_DIR/${sample}_1.fq.gz"
+    outR2="$OUT_DIR/${sample}_2.fq.gz"
+  fi
+
+  html="$OUT_DIR/reports/${sample}.fastp.html"
+  json="$OUT_DIR/reports/${sample}.fastp.json"
+
+  echo "--- Trimming $sample ---"
+  fastp \
+    -i "$R1" -I "$R2" \
+    -o "$outR1" -O "$outR2" \
+    --detect_adapter_for_pe \
+    --thread "$THREADS" \
+    --html "$html" \
+    --json "$json" \
+    --report_title "$sample"
+done
+
+echo "DONE"
+date

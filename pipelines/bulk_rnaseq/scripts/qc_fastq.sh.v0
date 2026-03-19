@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+INPUT_DIR="${1:?Usage: qc_fastq.sh <input_dir> <out_dir> [threads]}"
+OUT_DIR="${2:?Usage: qc_fastq.sh <input_dir> <out_dir> [threads]}"
+THREADS="${3:-8}"
+
+mkdir -p "$OUT_DIR"
+
+echo "=== FastQC + MultiQC ==="
+date
+echo "INPUT_DIR=$INPUT_DIR"
+echo "OUT_DIR=$OUT_DIR"
+echo "THREADS=$THREADS"
+
+# sanity check
+shopt -s nullglob
+FASTQS=("$INPUT_DIR"/*.fq.gz "$INPUT_DIR"/*.fastq.gz)
+if [ ${#FASTQS[@]} -eq 0 ]; then
+  echo "ERROR: No *.fq.gz or *.fastq.gz found in $INPUT_DIR" >&2
+  exit 2
+fi
+
+echo "Found ${#FASTQS[@]} FASTQs"
+
+fastqc -t "$THREADS" -o "$OUT_DIR" "${FASTQS[@]}"
+multiqc "$OUT_DIR" -o "$OUT_DIR"
+
+echo "DONE"
+date

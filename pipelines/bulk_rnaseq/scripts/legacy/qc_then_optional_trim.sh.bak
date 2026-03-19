@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage:
+# qc_then_optional_trim.sh <raw_dir> <work_root> [threads]
+# Produces:
+#   <work_root>/qc/raw
+#   <work_root>/trimmed
+#   <work_root>/qc/trimmed
+
+RAW_DIR="${1:?Usage: qc_then_optional_trim.sh <raw_dir> <work_root> [threads]}"
+WORK_ROOT="${2:?Usage: qc_then_optional_trim.sh <raw_dir> <work_root> [threads]}"
+THREADS="${3:-8}"
+
+QC_RAW="$WORK_ROOT/qc/raw"
+TRIM_DIR="$WORK_ROOT/trimmed"
+QC_TRIM="$WORK_ROOT/qc/trimmed"
+
+mkdir -p "$WORK_ROOT"
+
+echo "Step 1: QC on raw reads"
+./scripts/qc_fastq.sh "$RAW_DIR" "$QC_RAW" "$THREADS"
+
+echo
+echo "Review MultiQC report:"
+echo "  $QC_RAW/multiqc_report.html"
+echo
+
+read -r -p "Do you want to run trimming + re-QC? (y/N): " ans
+ans="${ans:-N}"
+
+if [[ "$ans" =~ ^[Yy]$ ]]; then
+  echo "Step 2: Trimming with fastp"
+  ./scripts/trim_fastp.sh "$RAW_DIR" "$TRIM_DIR" "$THREADS"
+
+  echo "Step 3: QC on trimmed reads"
+  ./scripts/qc_fastq.sh "$TRIM_DIR" "$QC_TRIM" "$THREADS"
+
+  echo "Trimmed MultiQC report:"
+  echo "  $QC_TRIM/multiqc_report.html"
+else
+  echo "Skipping trimming."
+fi
+
+echo "DONE"

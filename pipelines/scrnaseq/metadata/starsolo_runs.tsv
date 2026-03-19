@@ -1,0 +1,2 @@
+run_id	fastq_dir	sample_id	chemistry
+pbmc_1k_v3_GRCh38g49	data/fastq/pbmc_1k_v3/pbmc_1k_v3_fastqs	pbmc_1k_v3	10xv3

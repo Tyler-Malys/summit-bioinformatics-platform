@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage:
+# star_align.sh <input_dir> <out_dir> <star_index> [threads]
+# Expects paired-end naming: *_1.fq.gz and *_2.fq.gz
+
+INPUT_DIR="${1:?Usage: star_align.sh <input_dir> <out_dir> <star_index> [threads]}"
+OUT_DIR="${2:?Usage: star_align.sh <input_dir> <out_dir> <star_index> [threads]}"
+STAR_INDEX="${3:?Usage: star_align.sh <input_dir> <out_dir> <star_index> [threads]}"
+THREADS="${4:-8}"
+
+echo "=== STAR alignment ==="
+date
+echo "INPUT_DIR=$INPUT_DIR"
+echo "OUT_DIR=$OUT_DIR"
+echo "STAR_INDEX=$STAR_INDEX"
+echo "THREADS=$THREADS"
+echo "HOST=$(hostname)"
+echo "PWD=$(pwd)"
+echo "STAR_VERSION=$(STAR --version 2>/dev/null || echo 'unknown')"
+
+command -v STAR >/dev/null || { echo "ERROR: STAR not found in PATH" >&2; exit 127; }
+test -d "$STAR_INDEX" || { echo "ERROR: STAR index dir not found: $STAR_INDEX" >&2; exit 2; }
+test -d "$INPUT_DIR" || { echo "ERROR: input dir not found: $INPUT_DIR" >&2; exit 1; }
+test -r "$INPUT_DIR" || { echo "ERROR: input dir not readable: $INPUT_DIR" >&2; exit 1; }
+
+mkdir -p "$OUT_DIR"
+
+shopt -s nullglob
+mapfile -t R1S < <(ls -1 "$INPUT_DIR"/*_1.fq.gz | sort)
+if [ ${#R1S[@]} -eq 0 ]; then
+  echo "ERROR: No *_1.fq.gz files found in $INPUT_DIR" >&2
+  exit 3
+fi
+
+echo "Found ${#R1S[@]} samples to process."
+
+for R1 in "${R1S[@]}"; do
+  R2="${R1%_1.fq.gz}_2.fq.gz"
+  if [ ! -f "$R2" ]; then
+    echo "ERROR: Missing R2 for $R1 (expected $R2)" >&2
+    exit 4
+  fi
+
+  test -r "$R1" || { echo "ERROR: cannot read $R1" >&2; exit 5; }
+  test -r "$R2" || { echo "ERROR: cannot read $R2" >&2; exit 5; }
+
+  base="$(basename "$R1")"
+  sample="${base%_1.fq.gz}"
+  sample_out="$OUT_DIR/$sample"
+  mkdir -p "$sample_out"
+
+  # STAR output files (with prefix = sample_out/)
+  bam="$sample_out/Aligned.sortedByCoord.out.bam"
+  final="$sample_out/Log.final.out"
+
+  if [ -s "$bam" ] && [ -s "$final" ]; then
+    echo "SKIP: $sample (BAM + Log.final.out exist)"
+    continue
+  fi
+
+  log="$sample_out/star.log"
+  prefix="$sample_out/"
+
+  echo "--- STAR align: $sample ---"
+  date | tee "$log"
+  echo "R1=$R1" | tee -a "$log"
+  echo "R2=$R2" | tee -a "$log"
+
+  STAR \
+    --runThreadN "$THREADS" \
+    --genomeDir "$STAR_INDEX" \
+    --readFilesIn "$R1" "$R2" \
+    --readFilesCommand zcat \
+    --outFileNamePrefix "$prefix" \
+    --outSAMtype BAM SortedByCoordinate \
+    --outSAMattributes NH HI AS nM \
+    --quantMode GeneCounts \
+    2>&1 | tee -a "$log"
+
+done
+
+echo "Total samples considered: ${#R1S[@]}"
+echo "DONE"
+date

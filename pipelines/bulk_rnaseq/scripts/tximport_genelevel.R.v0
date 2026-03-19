@@ -1,0 +1,77 @@
+.libPaths("~/R/x86_64-pc-linux-gnu-library/4.1")
+
+suppressPackageStartupMessages({
+  library(tximport)
+  library(readr)
+})
+
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) < 3) {
+  stop("Usage: Rscript tximport_genelevel.R <samples_txt> <salmon_quant_dir> <out_dir>", call. = FALSE)
+}
+
+samples_txt <- args[1]
+salmon_dir  <- args[2]
+out_dir     <- args[3]
+
+cat("=== tximport gene-level summarization ===\n")
+cat(format(Sys.time()), "\n")
+cat("samples_txt=", samples_txt, "\n", sep = "")
+cat("salmon_dir=",  salmon_dir,  "\n", sep = "")
+cat("out_dir=",     out_dir,     "\n", sep = "")
+
+# Basic checks
+if (!file.exists(samples_txt)) stop(paste0("ERROR: samples_txt not found: ", samples_txt), call. = FALSE)
+if (!dir.exists(salmon_dir))   stop(paste0("ERROR: salmon_dir not found: ", salmon_dir), call. = FALSE)
+
+samples <- readLines(samples_txt)
+samples <- samples[nzchar(samples)]  # drop empty lines
+
+if (length(samples) == 0) stop("ERROR: samples file is empty", call. = FALSE)
+
+cat("num_samples=", length(samples), "\n", sep = "")
+cat("samples=", paste(samples, collapse = ","), "\n", sep = "")
+
+files <- file.path(salmon_dir, samples, "quant.sf")
+names(files) <- samples
+
+missing <- files[!file.exists(files)]
+if (length(missing) > 0) {
+  cat("ERROR: Missing quant.sf for:\n")
+  cat(paste0("  ", names(missing), " -> ", missing), sep = "\n")
+  cat("\n")
+  stop("ERROR: One or more quant.sf files are missing. See output above.", call. = FALSE)
+}
+
+tx2gene_path <- "~/refs/gencode_grch38/tx2gene.noversion.tsv"
+if (!file.exists(tx2gene_path)) {
+  stop(paste0("ERROR: tx2gene file not found: ", tx2gene_path), call. = FALSE)
+}
+
+tx2gene <- read_tsv(
+  tx2gene_path,
+  col_names = c("TXNAME", "GENEID"),
+  show_col_types = FALSE
+)
+
+txi <- tximport(
+  files,
+  type = "salmon",
+  tx2gene = tx2gene,
+  ignoreTxVersion = TRUE,
+  dropInfReps = TRUE
+)
+
+dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+counts_path <- file.path(out_dir, "gene_counts.csv")
+tpm_path    <- file.path(out_dir, "gene_tpm.csv")
+
+write.csv(txi$counts,    counts_path)
+write.csv(txi$abundance, tpm_path)
+
+cat("Wrote:\n")
+cat("  ", counts_path, "\n", sep = "")
+cat("  ", tpm_path, "\n", sep = "")
+cat("DONE\n")
+cat(format(Sys.time()), "\n")

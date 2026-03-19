@@ -1,0 +1,70 @@
+RUN RECORD — Salmon Quantification
+Date: 2026-02-04
+Analyst: Tyler Malys
+Project: Delcath Bulk RNA-seq
+
+------------------------------------
+SOFTWARE
+------------------------------------
+Salmon version: salmon v1.4.0
+
+System: Linux DEL-PYTHONV 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+
+Threads used: 8
+
+------------------------------------
+REFERENCE
+------------------------------------
+Genome: mm10
+Transcriptome FASTA:
+refs/mm10/fasta/mm10_transcripts_plus_decoys.fa
+
+Decoys:
+refs/mm10/fasta/mm10_decoys.txt
+
+Salmon index:
+refs/mm10/salmon_index
+
+Index summary:
+- 141,058 targets
+- 66 decoys
+
+------------------------------------
+QUANTIFICATION PARAMETERS
+------------------------------------
+salmon quant \
+  -i refs/mm10/salmon_index \
+  -l A \
+  -r <FASTQ> \
+  --validateMappings \
+  --gcBias \
+  --seqBias \
+  -p 8
+
+Library type: Auto-detected SR (single-end)
+
+------------------------------------
+INPUT FILES
+------------------------------------
+ENCSR389GJZ_rep1_ENCFF657UWH.fastq.gz
+ENCSR389GJZ_rep2_ENCFF592GVA.fastq.gz
+
+------------------------------------
+OUTPUTS
+------------------------------------
+quants/encode/<sample>/quant.sf
+
+------------------------------------
+MAPPING RATES
+------------------------------------
+Rep1: 84.5507%
+Rep2: 84.8211%
+
+------------------------------------
+NOTES
+------------------------------------
+- Index rebuilt due to missing versionInfo.json in prior index
+- Smoke test performed before full quant
+- Consistent mapping rates across replicates
+- No runtime errors observed
+

@@ -27,3 +27,42 @@
 *.smf.json
 
 .DS_Store
+
+# ----------------------------
+# Migration / legacy safety
+# ----------------------------
+migration_backup/
+delcath_bulk_rnaseq/
+repo_tracking_inventory_2026-03-19.txt
+
+# ----------------------------
+# Common large bioinformatics files
+# ----------------------------
+*.bam
+*.bai
+*.cram
+*.crai
+*.sam
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.vcf
+*.vcf.gz
+*.gtf
+*.gff
+*.gff3
+*.fa
+*.fasta
+*.fna
+*.fa.gz
+*.fasta.gz
+*.mtx
+*.h5
+*.h5ad
+*.loom
+
+
+# generated analysis metrics
+**/analysis/metrics/
+

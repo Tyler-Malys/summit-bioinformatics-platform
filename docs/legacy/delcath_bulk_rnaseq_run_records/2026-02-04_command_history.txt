@@ -1,0 +1,181 @@
+    1  pwd
+    2  ls -la
+    3  mkdir -p ~/bioinformatics_projects
+    4  cd ~/bioinformatics_projects
+    5  pwd
+    6  mkdir delcath_bulk_rnaseq
+    7  cd delcath_bulk_rnaseq
+    8  pwd
+    9  mkdir -p data/raw/encode
+   10  mkdir -p data/raw/geo
+   11  mkdir -p data/metadata
+   12  mkdir -p data/logs
+   13  mkdir -p scripts
+   14  mkdir -p notes
+   15  tree -d
+   16  ls -r
+   17  ls -R
+   18  cd data/raw/encode
+   19  mkdir ENCSR389GJZ
+   20  cd ENCSR389GJZ
+   21  pwd
+   22  nano encode_fastq_urls.txt
+   23  wc -l encode_fastq_urls.txt
+   24  cat encode_fastq_urls.txt
+   25  wget -c -i encode_fastq_urls.txt
+   26  ls -lh *.fastq.gz
+   27  zcat ENCFF657UWH.fastq.gz | head
+   28  ls -1 *.fastq.gz > fastq_files_downloaded.txt
+   29  cat fastq_files_downloaded.txt
+   30  mv ENCFF657UWH.fastq.gz ENCSR389GJZ_rep1_ENCFF657UWH.fastq.gz
+   31  mv ENCFF592GVA.fastq.gz ENCSR389GJZ_rep2_ENCFF592GVA.fastq.gz
+   32  ls -lh *.fastq.gz
+   33  cd ~/bioinformatics_projects/delcath_bulk_rnaseq
+   34  pwd
+   35  nano data/metadata/sample_metadata.tsv
+   36  awk -F'\t' 'NR>1{print $5}' data/metadata/sample_metadata.tsv | while read f; do   if [ -f "$f" ]; then echo "OK: $f"; else echo "MISSING: $f"; fi; done
+   37  cd ~/bioinformatics_projects/delcath_bulk_rnaseq/data/raw/geo
+   38  mkdir GSE219778
+   39  cd GSE219778
+   40  pwd
+   41  cd ~/bioinformatics_projects/delcath_bulk_rnaseq/data/raw/encode/ENCSR389GJZ
+   42  # create a spot for manifests (if you don’t already have it)
+   43  mkdir -p ~/bioinformatics_projects/delcath_bulk_rnaseq/data/metadata/manifests
+   44  # compute checksums (fast, but will take a bit on 5.5GB)
+   45  md5sum *.fastq.gz | tee ~/bioinformatics_projects/delcath_bulk_rnaseq/data/metadata/manifests/ENCSR389GJZ_fastq_md5.txt
+   46  # quick completeness check: list files + sizes
+   47  ls -lh *.fastq.gz | tee ~/bioinformatics_projects/delcath_bulk_rnaseq/data/metadata/manifests/ENCSR389GJZ_fastq_ls-lh.txt
+   48  exit
+   49  ls -R
+   50  ls
+   51  cd ~
+   52  pwd
+   53  ls -lah
+   54  cd ~/bioinformatics_projects
+   55  ls -lah
+   56  cd ~/bioinformatics_projects/delcath_bulk_rnaseq
+   57  pwd
+   58  ls -lah
+   59  cd data
+   60  ls -lah
+   61  cd ~/bioinformatics_projects/delcath_bulk_rnaseq
+   62  ls data/raw/*.fastq.gz | wc -l
+   63  ls -lah data/raw
+   64  find data/raw/encode -type f -name "*.fastq.gz" | head -20
+   65  find data/raw/encode -type f -name "*.fastq.gz" | wc -l
+   66  cd ~/bioinformatics_projects/delcath_bulk_rnaseq
+   67  mkdir -p qc/fastqc_raw qc/multiqc/raw logs
+   68  fastqc   data/raw/encode/ENCSR389GJZ/*.fastq.gz   --outdir qc/fastqc_raw   --threads 4   2>&1 | tee logs/fastqc_raw_encode.log
+   69  sudo apt update
+   70  sudo apt install -y fastqc
+   71  fastqc --version
+   72  which fastqc
+   73  java -version
+   74  mkdir -p qc/fastqc_raw qc/multiqc/raw logs
+   75  fastqc   data/raw/encode/ENCSR389GJZ/*.fastq.gz   --outdir qc/fastqc_raw   --threads 4   2>&1 | tee logs/fastqc_raw_encode.log
+   76  ls -lah qc/fastqc_raw
+   77  which multiqc
+   78  sudo apt install -y multiqc
+   79  multiqc --version
+   80  which multiqc
+   81  mkdir -p qc/multiqc/raw logs
+   82  multiqc qc/fastqc_raw   --outdir qc/multiqc/raw   --filename multiqc_raw_fastqc_encode.html   2>&1 | tee logs/multiqc_raw_encode.log
+   83  explorer.exe qc/multiqc/raw
+   84  explorer.exe .
+   85  cd ~/bioinformatics_projects/delcath_bulk_rnaseq/qc/multiqc/raw
+   86  pwd
+   87  explorer.exe .
+   88  multiqc_raw_fastqc_encode.html
+   89  sudo apt install -y cutadapt
+   90  cutadapt --version
+   91  which cutadapt
+   92  mkdir -p data/trimmed qc/fastqc_trimmed qc/multiqc/trimmed logs/trim
+   93  mkdir -p data/tmp
+   94  zcat data/raw/encode/ENCSR389GJZ/ENCSR389GJZ_rep1_ENCFF657UWH.fastq.gz   | head -n 40000   | gzip > data/tmp/rep1_head10k.fastq.gz
+   95  mkdir -p ~/bioinformatics_projects/delcath_bulk_rnaseq/data/tmp
+   96  zcat ~/bioinformatics_projects/delcath_bulk_rnaseq/data/raw/encode/ENCSR389GJZ/ENCSR389GJZ_rep1_ENCFF657UWH.fastq.gz   | head -n 40000   | gzip > ~/bioinformatics_projects/delcath_bulk_rnaseq/data/tmp/rep1_head10k.fastq.gz
+   97  ls -lah data/tmp
+   98  cd ~/bioinformatics_projects/delcath_bulk_rnaseq
+   99  mkdir -p data/tmp
+  100  zcat data/raw/encode/ENCSR389GJZ/ENCSR389GJZ_rep1_ENCFF657UWH.fastq.gz   | head -n 40000   | gzip > data/tmp/rep1_head10k.fastq.gz
+  101  ls -lah data/tmp/rep1_head10k.fastq.gz
+  102  mkdir -p logs/trim data/tmp
+  103  cutadapt   -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA   -q 20 -m 30   -o data/tmp/rep1_head10k.trim.fastq.gz   data/tmp/rep1_head10k.fastq.gz   2>&1 | tee logs/trim/cutadapt_smoketest_rep1.log
+  104  ls -lah data/tmp/rep1_head10k.trim.fastq.gz logs/trim/cutadapt_smoketest_rep1.log
+  105  tail -n 25 logs/trim/cutadapt_smoketest_rep1.log
+  106  exit
+  107  cd ~
+  108  pwd
+  109  df -hT
+  110  df -i
+  111  mkdir -p /mnt/d/delcath_refs/mm10
+  112  mv ~/bioinformatics_projects/delcath_bulk_rnaseq/refs/mm10 /mnt/d/delcath_refs/
+  113  ls -lah /mnt/d/delcath_refs/mm10
+  114  du -sh /mnt/d/delcath_refs/mm10
+  115  ls -lah ~/bioinformatics_projects/delcath_bulk_rnaseq/refs
+  116  wmic logicaldisk get name,size,freespace
+  117  exit
+  118  Get-PSDrive C
+  119  df -h
+  120  dd if=/dev/zero of=~/iotest.tmp bs=1G count=2 oflag=direct
+  121  rm ~/iotest.tmp
+  122  dd if=/dev/zero of=/mnt/d/iotest.tmp bs=1G count=2 oflag=direct
+  123  mkdir -p /mnt/d/wsltest
+  124  dd if=/dev/zero of=/mnt/d/wsltest/iotest.tmp bs=1G count=2 oflag=direct
+  125  df -h /
+  126  lsblk
+  127  exit
+  128  cd ~
+  129  pwd
+  130  df -h
+  131  cd ~
+  132  pwd
+  133  whoami
+  134  date
+  135  salmon --version
+  136  uname -a
+  137  cd ~
+  138  ls -lah
+  139  cd ~/bioinformatics_projects
+  140  ls -lah
+  141  cd ~/bioinformatics_projects/delcath_bulk_rnaseq
+  142  ls -lah
+  143  ls -lah refs
+  144  find refs -maxdepth 3 -type f
+  145  refs/mm10/salmon_index/ref_indexing.log
+  146  refs/mm10/salmon_index/pre_indexing.log
+  147  ls -lah refs/mm10/salmon_index/*log
+  148  tail -n 80 refs/mm10/salmon_index/ref_indexing.log
+  149  salmon inspect -i refs/mm10/salmon_index
+  150  ls -lah data | head -n 50
+  151  ls -lah data/raw | head -n 50
+  152  find data/raw -type f -name "*.fastq.gz" | head -n 20
+  153  zcat data/raw/encode/ENCSR389GJZ/*.fastq.gz | head -n 8
+  154  mkdir -p data/test quants/test logs/salmon
+  155  zcat data/raw/encode/ENCSR389GJZ/ENCSR389GJZ_rep1_ENCFF657UWH.fastq.gz | head -n 200000 | gzip > data/test/index_smoketest.fastq.gz
+  156  ls -lah data/test/index_smoketest.fastq.gz
+  157  salmon quant   -i refs/mm10/salmon_index   -l A   -r data/test/index_smoketest.fastq.gz   --validateMappings   --gcBias --seqBias   -p 8   -o quants/test/index_smoketest   2>&1 | tee logs/salmon/index_smoketest_$(date +%F_%H%M).log
+  158  ls -lah quants/test/index_smoketest
+  159  head quants/test/index_smoketest/quant.sf
+  160  mv refs/mm10/salmon_index refs/mm10/salmon_index_BROKEN_$(date +%F_%H%M)
+  161  mkdir -p refs/mm10/salmon_index
+  162  mkdir -p logs/salmon
+  163  salmon index   -t refs/mm10/fasta/mm10_transcripts_plus_decoys.fa   -d refs/mm10/fasta/mm10_decoys.txt   -p 8   -i refs/mm10/salmon_index   2>&1 | tee logs/salmon/salmon_index_mm10_rebuild_$(date +%F_%H%M).log
+  164  ls -lah refs/mm10/salmon_index/versionInfo.json
+  165  salmon quant   -i refs/mm10/salmon_index   -l A   -r data/test/index_smoketest.fastq.gz   --validateMappings   --gcBias --seqBias   -p 8   -o quants/test/index_smoketest   2>&1 | tee logs/salmon/index_smoketest_after_rebuild_$(date +%F_%H%M).log
+  166  ls -lah quants/test/index_smoketest
+  167  ls -lah quants/test/index_smoketest/quant.sf
+  168  head -n 5 quants/test/index_smoketest/quant.sf
+  169  find data/raw/encode/ENCSR389GJZ -maxdepth 1 -type f -name "*.fastq.gz" -ls
+  170  mkdir -p quants/encode logs/salmon
+  171  for fq in data/raw/encode/ENCSR389GJZ/*.fastq.gz; do   sample=$(basename "$fq" .fastq.gz);   echo "Running $sample ...";   salmon quant     -i refs/mm10/salmon_index     -l A     -r "$fq"     --validateMappings     --gcBias --seqBias     -p 8     -o "quants/encode/$sample"     2>&1 | tee "logs/salmon/${sample}_$(date +%F_%H%M).log"; done
+  172  for q in quants/encode/*; do   echo "== $q ==";   ls -lah "$q/quant.sf"; done
+  173  head -n 2 quants/encode/ENCSR389GJZ_rep1_ENCFF657UWH/quant.sf
+  174  head -n 2 quants/encode/ENCSR389GJZ_rep2_ENCFF592GVA/quant.sf
+  175  grep -h "Mapping rate" logs/salmon/ENCSR389GJZ*.log
+  176  docs/run_records/2026-02-04_salmon_quant_mm10.txt
+  177  mkdir -p docs/run_records
+  178  ls docs
+  179  nano docs/run_records/2026-02-04_salmon_quant_mm10.txt
+  180  ls -lh docs/run_records/
+  181  history > docs/run_records/2026-02-04_command_history.txt

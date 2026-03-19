@@ -1,0 +1,204 @@
+#!/usr/bin/env Rscript
+
+suppressPackageStartupMessages({
+  library(fgsea)
+  library(data.table)
+  library(ggplot2)
+  library(AnnotationDbi)
+  library(org.Hs.eg.db)
+})
+
+# ----------------------------
+# Parameters (CLI overrides)
+# ----------------------------
+args <- commandArgs(trailingOnly = TRUE)
+
+# Helper for defaults
+`%||%` <- function(a, b) if (!is.null(a) && nzchar(a)) a else b
+
+# Minimal CLI parser: --key=value
+parse_kv <- function(x) {
+  kv <- strsplit(sub("^--", "", x), "=", fixed = TRUE)
+  keys <- vapply(kv, `[[`, character(1), 1)
+  vals <- vapply(kv, function(z) if (length(z) >= 2) paste(z[-1], collapse="=") else "", character(1))
+  out <- as.list(vals); names(out) <- keys
+  out
+}
+
+opt <- list()
+if (length(args) > 0) {
+  bad <- args[!grepl("^--[^=]+=", args)]
+  if (length(bad) > 0) stop("Bad args (must be --key=value): ", paste(bad, collapse = " "))
+  opt <- parse_kv(args)
+}
+
+# Defaults (used if not provided via CLI)
+DE_CSV  <- opt$de_csv  %||% "results/de/DESeq2_PooledCRC_vs_Hep_unshrunk.csv"
+RUN_ID  <- opt$run_id  %||% format(Sys.Date(), "%Y%m%d")
+GMT_FILE <- opt$gmt_file %||% file.path("results/gsea/msigdb", "REPLACE_WITH_GMT_FILENAME.gmt")
+
+RANK_BY <- opt$rank_by %||% "log2FoldChange"
+
+MIN_SIZE <- as.integer(opt$min_size %||% 15)
+MAX_SIZE <- as.integer(opt$max_size %||% 500)
+
+# Where outputs go (derived)
+OUT_BASE <- file.path("results/gsea", RUN_ID)
+OUT_RANKS <- file.path("results/gsea", "ranks")
+OUT_LOGS  <- file.path("results/gsea", "logs")
+
+# ----------------------------
+# Helpers
+# ----------------------------
+dir.create(OUT_BASE, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_RANKS, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_LOGS,  recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(OUT_BASE, "tables"), recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(OUT_BASE, "plots"),  recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path(OUT_BASE, "rds"),    recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path("results/gsea", "msigdb"), recursive = TRUE, showWarnings = FALSE)
+
+stopifnot(file.exists(DE_CSV))
+if (!file.exists(GMT_FILE)) {
+  stop(sprintf("GMT file not found: %s\nPlace your MSigDB .gmt into results/gsea/msigdb/ and update GMT_FILE in this script.", GMT_FILE))
+}
+
+message("Reading DE file: ", DE_CSV)
+de <- fread(DE_CSV)
+
+message("---- fgsea run config ----")
+message("RUN_ID: ", RUN_ID)
+message("DE_CSV: ", normalizePath(DE_CSV))
+message("GMT_FILE: ", normalizePath(GMT_FILE))
+message("RANK_BY (requested): ", RANK_BY)
+message("MIN_SIZE: ", MIN_SIZE, " | MAX_SIZE: ", MAX_SIZE)
+message("--------------------------")
+
+# Guess gene column names commonly seen
+gene_col_candidates <- c(
+  "", "gene", "Gene", "symbol", "SYMBOL", "gene_symbol", "hgnc_symbol", "external_gene_name",
+  "X", "V1", "Row.names", "rowname", "row.names", "Unnamed: 0", "...1"
+)
+gene_col <- gene_col_candidates[gene_col_candidates %in% names(de)][1]
+if (is.na(gene_col)) {
+  gene_col <- names(de)[1]
+  message("No standard gene column name detected; using first column as gene: ", gene_col)
+}
+
+rank_col <- RANK_BY
+
+# If user chose log2FoldChange but a 'stat' column exists, recommend/auto-switch
+if (RANK_BY == "log2FoldChange" && "stat" %in% names(de)) {
+  message("Detected 'stat' column — switching RANK_BY to 'stat' (recommended for GSEA).")
+  rank_col <- "stat"
+}
+
+if (!(rank_col %in% names(de))) {
+  stop(sprintf("Rank column '%s' not found in DE file. Available columns: %s",
+               rank_col, paste(names(de), collapse=", ")))
+}
+
+# Build ranks table (gene IDs may be Ensembl w/ version)
+ranks_dt <- de[, .(
+  gene_raw = as.character(get(gene_col)),
+  rank     = as.numeric(get(rank_col))
+)]
+
+# Clean gene IDs: drop surrounding quotes and strip Ensembl version suffix (e.g., ENSG... .13)
+ranks_dt[, gene_raw := gsub('^"|"$', "", gene_raw)]
+ranks_dt[, gene_id  := sub("\\.[0-9]+$", "", gene_raw)]
+
+ranks_dt <- ranks_dt[is.finite(rank)]
+ranks_dt <- ranks_dt[!is.na(gene_id) & gene_id != ""]
+
+# Map Ensembl -> HGNC symbol (required for MSigDB symbols GMT)
+mapped <- AnnotationDbi::mapIds(
+  org.Hs.eg.db,
+  keys      = unique(ranks_dt$gene_id),
+  column    = "SYMBOL",
+  keytype   = "ENSEMBL",
+  multiVals = "first"
+)
+
+ranks_dt[, gene := unname(mapped[gene_id])]
+
+# Keep only rows that mapped to a symbol
+before_n <- nrow(ranks_dt)
+ranks_dt <- ranks_dt[!is.na(gene) & gene != ""]
+after_n <- nrow(ranks_dt)
+message(sprintf("Mapped Ensembl->Symbol: kept %d/%d ranked rows after mapping.", after_n, before_n))
+
+# Deduplicate: keep the max absolute rank per symbol
+ranks_dt[, abs_rank := abs(rank)]
+setorder(ranks_dt, gene, -abs_rank)
+ranks_dt <- ranks_dt[!duplicated(gene)]
+ranks_dt[, abs_rank := NULL]
+
+# Build named ranks vector
+ranks <- ranks_dt$rank
+names(ranks) <- ranks_dt$gene
+ranks <- sort(ranks, decreasing = TRUE)
+
+rank_out_csv <- file.path(OUT_RANKS, sprintf("%s_ranks_%s.csv", RUN_ID, rank_col))
+fwrite(ranks_dt, rank_out_csv)
+message("Wrote ranks: ", rank_out_csv)
+
+message("Reading GMT: ", GMT_FILE)
+pathways <- fgsea::gmtPathways(GMT_FILE)
+
+# Diagnostics: overlap between ranked genes and pathway genes
+pathway_genes <- unique(unlist(pathways, use.names = FALSE))
+overlap_n <- sum(names(ranks) %in% pathway_genes)
+message(sprintf("Ranked genes: %d | Pathway genes (unique): %d | Overlap: %d",
+                length(ranks), length(pathway_genes), overlap_n))
+if (overlap_n < 1000) {
+  message("WARNING: Low overlap between ranks and GMT gene symbols. Verify identifier type (HGNC symbols vs Ensembl IDs).")
+}
+
+message("Running fgsea (multilevel)...")
+fg <- fgsea::fgseaMultilevel(
+  pathways = pathways,
+  stats    = ranks,
+  minSize  = MIN_SIZE,
+  maxSize  = MAX_SIZE
+)
+
+fg <- as.data.table(fg)
+fg[, abs_NES := abs(NES)]
+setorder(fg, padj, -abs_NES)
+fg[, abs_NES := NULL]
+
+# Save results
+res_csv <- file.path(OUT_BASE, "tables", sprintf("%s_fgsea_%s.csv", RUN_ID, rank_col))
+fwrite(fg, res_csv)
+message("Wrote fgsea results: ", res_csv)
+
+res_rds <- file.path(OUT_BASE, "rds", sprintf("%s_fgsea_%s.rds", RUN_ID, rank_col))
+saveRDS(list(
+  fgsea = fg,
+  ranks = ranks,
+  ranks_dt = ranks_dt,
+  gmt = GMT_FILE,
+  params = list(RUN_ID=RUN_ID, DE_CSV=DE_CSV, GMT_FILE=GMT_FILE, MIN_SIZE=MIN_SIZE, MAX_SIZE=MAX_SIZE, RANK_BY=RANK_BY, RANK_COL_USED=rank_col)
+), res_rds)
+message("Wrote RDS: ", res_rds)
+
+# Simple plot: top NES by padj
+topn <- fg[!is.na(padj) & padj < 0.05][1:min(30, .N)]
+if (nrow(topn) > 0) {
+  p <- ggplot(topn, aes(x=reorder(pathway, NES), y=NES)) +
+    geom_col() +
+    coord_flip() +
+    labs(
+      title = sprintf("Top enriched pathways (padj < 0.05) — %s", RUN_ID),
+      x = "Pathway",
+      y = "NES"
+    )
+  plot_file <- file.path(OUT_BASE, "plots", sprintf("%s_topNES_%s.png", RUN_ID, rank_col))
+  ggsave(plot_file, p, width = 10, height = 8, dpi = 150)
+  message("Wrote plot: ", plot_file)
+} else {
+  message("No pathways with padj < 0.05; skipping topNES plot.")
+}
+
+message("Done.")

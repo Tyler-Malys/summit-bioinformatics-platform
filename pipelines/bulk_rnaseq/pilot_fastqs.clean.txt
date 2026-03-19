@@ -1,0 +1,12 @@
+data/raw/fastqs/THLE_2_DMSO_1_1.fq.gz
+data/raw/fastqs/THLE_2_DMSO_1_2.fq.gz
+data/raw/fastqs/THLE_2_D1_1_1.fq.gz
+data/raw/fastqs/THLE_2_D1_1_2.fq.gz
+data/raw/fastqs/SW480_DMSO_1_1.fq.gz
+data/raw/fastqs/SW480_DMSO_1_2.fq.gz
+data/raw/fastqs/SW480_D1_1_1.fq.gz
+data/raw/fastqs/SW480_D1_1_2.fq.gz
+data/raw/fastqs/SW48_DMSO_1_1.fq.gz
+data/raw/fastqs/SW48_DMSO_1_2.fq.gz
+data/raw/fastqs/SW1116_D1_1_1.fq.gz
+data/raw/fastqs/SW1116_D1_1_2.fq.gz

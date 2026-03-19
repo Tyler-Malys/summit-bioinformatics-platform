@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Wrapper: pilot smoke run for bulk RNA-seq pipeline
+# Runs: FastQC/MultiQC -> fastp -> Salmon -> tximport -> STAR
+# Uses central config: config/pipeline.env
+
+CONFIG="${1:-config/pipeline.env}"
+
+if [[ ! -f "$CONFIG" ]]; then
+  echo "ERROR: config file not found: $CONFIG" >&2
+  exit 2
+fi
+
+# Load config (sets RUN_ID, THREADS, paths, etc.)
+source "$CONFIG"
+
+# Basic validation of required vars
+: "${THREADS:?Missing THREADS in config}"
+: "${RUN_ID:?Missing RUN_ID in config}"
+: "${PILOT_FASTQ_DIR:?Missing PILOT_FASTQ_DIR in config}"
+: "${QC_OUT_ROOT:?Missing QC_OUT_ROOT in config}"
+: "${TRIM_OUT_ROOT:?Missing TRIM_OUT_ROOT in config}"
+: "${SALMON_OUT_ROOT:?Missing SALMON_OUT_ROOT in config}"
+: "${TXIMPORT_OUT_ROOT:?Missing TXIMPORT_OUT_ROOT in config}"
+: "${STAR_OUT_ROOT:?Missing STAR_OUT_ROOT in config}"
+: "${SALMON_INDEX:?Missing SALMON_INDEX in config}"
+: "${TX2GENE:?Missing TX2GENE in config}"
+: "${STAR_INDEX:?Missing STAR_INDEX in config}"
+: "${DO_QC_RAW:=0}"
+: "${DO_TRIM:=0}"
+: "${DO_QC_POSTTRIM:=0}"
+: "${DO_SALMON:=0}"
+: "${DO_TXIMPORT:=0}"
+: "${DO_STAR:=0}"
+
+if [[ ! -d "$PILOT_FASTQ_DIR" ]]; then
+  echo "ERROR: PILOT_FASTQ_DIR not found: $PILOT_FASTQ_DIR" >&2
+  exit 3
+fi
+
+# Wrapper run dir + log
+WRAP_DIR="results/wrapper_runs/${RUN_ID}"
+mkdir -p "$WRAP_DIR"
+WRAP_LOG="${WRAP_DIR}/wrapper.log"
+
+echo "=== WRAPPER RUN ===" | tee "$WRAP_LOG"
+date | tee -a "$WRAP_LOG"
+echo "CONFIG=$CONFIG" | tee -a "$WRAP_LOG"
+echo "RUN_ID=$RUN_ID" | tee -a "$WRAP_LOG"
+echo "THREADS=$THREADS" | tee -a "$WRAP_LOG"
+echo "PILOT_FASTQ_DIR=$PILOT_FASTQ_DIR" | tee -a "$WRAP_LOG"
+echo "SALMON_INDEX=$SALMON_INDEX" | tee -a "$WRAP_LOG"
+echo "STAR_INDEX=$STAR_INDEX" | tee -a "$WRAP_LOG"
+echo "TX2GENE=$TX2GENE" | tee -a "$WRAP_LOG"
+echo | tee -a "$WRAP_LOG"
+
+########################################
+# 1) QC
+########################################
+echo "=== STAGE 1: QC (FastQC + MultiQC) ===" | tee -a "$WRAP_LOG"
+bash scripts/qc_fastq.sh \
+  -i "$PILOT_FASTQ_DIR" \
+  -o "$QC_OUT_ROOT" \
+  --run-id "qc_${RUN_ID}" \
+  -t "$THREADS" \
+  2>&1 | tee -a "$WRAP_LOG"
+echo | tee -a "$WRAP_LOG"
+
+QC_RUN_DIR="${QC_OUT_ROOT}/qc_${RUN_ID}"
+echo "QC_RUN_DIR=$QC_RUN_DIR" | tee -a "$WRAP_LOG"
+
+########################################
+# 2) Trim
+########################################
+echo "=== STAGE 2: TRIM (fastp) ===" | tee -a "$WRAP_LOG"
+bash scripts/trim_fastp.sh \
+  -i "$PILOT_FASTQ_DIR" \
+  -o "$TRIM_OUT_ROOT" \
+  --run-id "trim_${RUN_ID}" \
+  -t "$THREADS" \
+  2>&1 | tee -a "$WRAP_LOG"
+echo | tee -a "$WRAP_LOG"
+
+TRIM_RUN_DIR="${TRIM_OUT_ROOT}/trim_${RUN_ID}"
+echo "TRIM_RUN_DIR=$TRIM_RUN_DIR" | tee -a "$WRAP_LOG"
+
+########################################
+# 3) Salmon
+########################################
+echo "=== STAGE 3: SALMON (quant) ===" | tee -a "$WRAP_LOG"
+bash scripts/salmon_quant.sh \
+  -i "$TRIM_RUN_DIR" \
+  -o "$SALMON_OUT_ROOT" \
+  --run-id "salmon_${RUN_ID}" \
+  -t "$THREADS" \
+  -r "$SALMON_INDEX" \
+  2>&1 | tee -a "$WRAP_LOG"
+echo | tee -a "$WRAP_LOG"
+
+SALMON_RUN_DIR="${SALMON_OUT_ROOT}/salmon_${RUN_ID}"
+echo "SALMON_RUN_DIR=$SALMON_RUN_DIR" | tee -a "$WRAP_LOG"
+
+########################################
+# 4) tximport
+########################################
+echo "=== STAGE 4: TXIMPORT (gene-level) ===" | tee -a "$WRAP_LOG"
+Rscript scripts/tximport_genelevel.R \
+  -i "$SALMON_RUN_DIR" \
+  -o "$TXIMPORT_OUT_ROOT" \
+  -m "$TX2GENE" \
+  --run-id "txi_${RUN_ID}" \
+  2>&1 | tee -a "$WRAP_LOG"
+echo | tee -a "$WRAP_LOG"
+
+TXI_RUN_DIR="${TXIMPORT_OUT_ROOT}/txi_${RUN_ID}"
+echo "TXI_RUN_DIR=$TXI_RUN_DIR" | tee -a "$WRAP_LOG"
+
+########################################
+# 5) STAR
+########################################
+echo "=== STAGE 5: STAR (align) ===" | tee -a "$WRAP_LOG"
+bash scripts/star_align.sh \
+  -i "$TRIM_RUN_DIR" \
+  -o "$STAR_OUT_ROOT" \
+  --run-id "star_${RUN_ID}" \
+  -t "$THREADS" \
+  -r "$STAR_INDEX" \
+  2>&1 | tee -a "$WRAP_LOG"
+echo | tee -a "$WRAP_LOG"
+
+STAR_RUN_DIR="${STAR_OUT_ROOT}/star_${RUN_ID}"
+echo "STAR_RUN_DIR=$STAR_RUN_DIR" | tee -a "$WRAP_LOG"
+
+echo "=== WRAPPER DONE ===" | tee -a "$WRAP_LOG"
+date | tee -a "$WRAP_LOG"
+
+echo
+echo "Summary:"
+echo "  QC:      $QC_RUN_DIR"
+echo "  TRIM:    $TRIM_RUN_DIR"
+echo "  SALMON:  $SALMON_RUN_DIR"
+echo "  TXIMPORT:$TXI_RUN_DIR"
+echo "  STAR:    $STAR_RUN_DIR"
+echo "  WRAPLOG: $WRAP_LOG"
