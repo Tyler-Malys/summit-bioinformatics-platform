@@ -41,4 +41,3 @@ To support:
 - enterprise-grade pipeline architecture
 - cross-pipeline standardization
 - scalable consulting delivery through Summit Informatics
-
