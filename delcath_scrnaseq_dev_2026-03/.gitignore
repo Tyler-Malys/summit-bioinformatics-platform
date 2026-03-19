@@ -1,0 +1,33 @@
+# Raw sequencing data
+data/
+raw/
+
+# Pipeline outputs
+runs/
+results/
+qc/
+logs/
+
+# Reference indexes
+ref/
+
+# Large bioinformatics files
+*.fastq
+*.fastq.gz
+*.bam
+*.bai
+*.mtx
+*.h5
+*.cloupe
+
+# Temporary files
+*.tmp
+*.log
+
+# Analysis outputs
+analysis/objects/
+analysis/markers/
+
+# Cell Ranger / STARsolo runtime directories
+pbmc_1k_v3_GRCh38g49/
+*.mro

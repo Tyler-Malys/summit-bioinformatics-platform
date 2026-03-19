@@ -1,0 +1,29 @@
+**/.git/
+
+# generated outputs / large data
+**/analysis/figures/
+**/results/
+**/runs/
+**/logs/
+**/raw/
+**/data/
+**/quants/
+**/refs/
+**/pbmc_1k_v3_GRCh38g49/
+**/validation/
+**/qc/
+
+# report/image artifacts
+*.pdf
+*.png
+*.jpg
+*.jpeg
+
+# serialized R outputs
+*.rds
+*.rda
+
+# misc generated json-like artifacts
+*.smf.json
+
+.DS_Store
