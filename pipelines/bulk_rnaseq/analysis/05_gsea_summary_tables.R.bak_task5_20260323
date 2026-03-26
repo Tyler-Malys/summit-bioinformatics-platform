@@ -4,61 +4,28 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
-args <- commandArgs(trailingOnly = TRUE)
-
-get_flag_value <- function(flag) {
-  idx <- match(flag, args)
-  if (is.na(idx)) return(NULL)
-  if (idx == length(args)) stop(paste0("ERROR: missing value after ", flag), call. = FALSE)
-  args[[idx + 1]]
-}
-
-print_usage <- function() {
-  cat("Usage:\n")
-  cat("  Rscript analysis/05_gsea_summary_tables.R \\\n")
-  cat("    --gsea-root <gsea_root_dir> \\\n")
-  cat("    --out-dir <summary_output_dir>\n")
-}
-
-if ("-h" %in% args || "--help" %in% args) {
-  print_usage()
-  quit(status = 0, save = "no")
-}
-
 message("Starting GSEA summary table generation...")
 
 # ----------------------------
 # Output directory
 # ----------------------------
 
-GSEA_ROOT <- get_flag_value("--gsea-root")
-OUT_DIR   <- get_flag_value("--out-dir")
-
-if (is.null(GSEA_ROOT) || is.null(OUT_DIR)) {
-  cat("ERROR: required args missing.\n\n")
-  print_usage()
-  quit(status = 2, save = "no")
-}
-
-if (!dir.exists(GSEA_ROOT)) {
-  stop(paste0("ERROR: GSEA root directory not found: ", GSEA_ROOT), call. = FALSE)
-}
-
+OUT_DIR <- file.path("results", "gsea", "summary")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-
-message("Using GSEA root: ", GSEA_ROOT)
-message("Writing summary outputs to: ", OUT_DIR)
 
 # ----------------------------
 # Locate fgsea result files
 # ----------------------------
 
 files <- list.files(
-  GSEA_ROOT,
+  "results/gsea",
   pattern = "_fgsea_stat\\.csv$",
   recursive = TRUE,
   full.names = TRUE
 )
+
+# Restrict to your 20260226 runs
+files <- files[grepl("_20260226", files)]
 
 if (length(files) == 0) {
   stop("No fgsea result files found.")
@@ -74,7 +41,8 @@ all <- rbindlist(lapply(files, function(f) {
 
   dt <- fread(f)
 
-  run_id <- basename(dirname(dirname(f)))
+  parts <- strsplit(f, "/")[[1]]
+  run_id <- parts[3]
 
   dt[, run_id := run_id]
 

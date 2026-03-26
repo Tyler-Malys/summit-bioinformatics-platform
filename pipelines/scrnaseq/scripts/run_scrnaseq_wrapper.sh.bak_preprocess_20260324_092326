@@ -1,0 +1,348 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+########################################
+# scRNA-seq canonical wrapper
+########################################
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PIPELINE_ROOT_DEFAULT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+DEFAULT_CONFIG="${PIPELINE_ROOT_DEFAULT}/config/template_scrnaseq.env"
+
+CONFIG="${1:-$DEFAULT_CONFIG}"
+CLI_ENGINE="${2:-}"
+CLI_MANIFEST="${3:-}"
+
+if [[ ! -f "$CONFIG" ]]; then
+  echo "ERROR: config file not found: $CONFIG" >&2
+  exit 2
+fi
+
+# shellcheck disable=SC1090
+source "$CONFIG"
+
+########################################
+# helpers
+########################################
+
+log() {
+  local msg="$*"
+  if [[ "${WRITE_WRAPPER_LOG:-1}" == "1" ]]; then
+    echo "[$(date '+%F %T')] $msg" | tee -a "$WRAP_LOG"
+  else
+    echo "[$(date '+%F %T')] $msg"
+  fi
+}
+
+require_var() {
+  local var_name="$1"
+  if [[ -z "${!var_name:-}" ]]; then
+    echo "ERROR: required variable missing: $var_name" >&2
+    exit 2
+  fi
+}
+
+require_file() {
+  local path="$1"
+  [[ -f "$path" ]] || { echo "ERROR: required file not found: $path" >&2; exit 3; }
+}
+
+require_dir() {
+  local path="$1"
+  [[ -d "$path" ]] || { echo "ERROR: required directory not found: $path" >&2; exit 3; }
+}
+
+normalize_bool() {
+  local var_name="$1"
+  local val="${!var_name:-0}"
+  case "$val" in
+    1|true|TRUE|yes|YES) printf -v "$var_name" "1" ;;
+    0|false|FALSE|no|NO|"") printf -v "$var_name" "0" ;;
+    *)
+      echo "ERROR: invalid boolean value for $var_name: $val" >&2
+      exit 2
+      ;;
+  esac
+}
+
+manifest_has_columns() {
+  local manifest="$1"
+  shift
+  local expected=("$@")
+
+  local header
+  header="$(head -n 1 "$manifest")"
+
+  local missing=()
+  local col
+  for col in "${expected[@]}"; do
+    if ! printf '%s\n' "$header" | tr '\t' '\n' | grep -Fxq "$col"; then
+      missing+=("$col")
+    fi
+  done
+
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "ERROR: manifest missing expected columns: ${missing[*]}" >&2
+    echo "Manifest: $manifest" >&2
+    echo "Header: $header" >&2
+    exit 3
+  fi
+}
+
+########################################
+# normalize config
+########################################
+
+PIPELINE_ROOT="${PIPELINE_ROOT:-$PIPELINE_ROOT_DEFAULT}"
+RUNS_ROOT="${RUNS_ROOT:-${PIPELINE_ROOT}/runs}"
+WRAPPER_LOG_NAME="${WRAPPER_LOG_NAME:-wrapper.log}"
+
+if [[ -n "$CLI_ENGINE" ]]; then
+  ENGINE="$CLI_ENGINE"
+fi
+ENGINE="${ENGINE:-starsolo}"
+
+if [[ -n "$CLI_MANIFEST" ]]; then
+  MANIFEST_FILE="$CLI_MANIFEST"
+fi
+MANIFEST_FILE="${MANIFEST_FILE:-}"
+
+RUN_ID="${RUN_ID:-}"
+if [[ -z "$RUN_ID" ]]; then
+  RUN_ID="scrna_${ENGINE}_$(date +%Y%m%d_%H%M%S)"
+fi
+
+normalize_bool DRY_RUN
+normalize_bool WRITE_WRAPPER_LOG
+normalize_bool WRITE_REPO_LEVEL_EXPORTS
+normalize_bool RUN_PREPROCESS
+normalize_bool RUN_QC
+normalize_bool RUN_DOWNSTREAM_CORE
+normalize_bool RUN_MARKERS
+normalize_bool RUN_ANNOTATION
+normalize_bool RUN_DIFFERENTIAL
+normalize_bool RUN_PATHWAY
+normalize_bool RUN_VISUALIZATION
+normalize_bool RUN_REPORT
+normalize_bool RUN_COMPARE_BACKENDS
+
+########################################
+# validate config
+########################################
+
+require_var PIPELINE_ROOT
+require_var RUNS_ROOT
+require_var ENGINE
+require_var THREADS
+require_var MEMORY_GB
+require_var SPECIES
+
+case "${ENGINE,,}" in
+  cellranger|starsolo) ;;
+  *)
+    echo "ERROR: ENGINE must be one of: cellranger, starsolo" >&2
+    exit 2
+    ;;
+esac
+
+if [[ -z "$MANIFEST_FILE" ]]; then
+  case "${ENGINE,,}" in
+    cellranger) MANIFEST_FILE="${PIPELINE_ROOT}/metadata/cellranger_runs.tsv" ;;
+    starsolo)   MANIFEST_FILE="${PIPELINE_ROOT}/metadata/starsolo_runs.tsv" ;;
+  esac
+fi
+
+require_dir "$PIPELINE_ROOT"
+require_file "$MANIFEST_FILE"
+
+########################################
+# run directory setup
+########################################
+
+RUN_DIR="${RUNS_ROOT}/${RUN_ID}"
+INPUT_DIR="${RUN_DIR}/input"
+WORKING_DIR="${RUN_DIR}/working"
+LOGS_DIR="${RUN_DIR}/logs"
+QC_DIR="${RUN_DIR}/qc"
+OUTPUTS_DIR="${RUN_DIR}/outputs"
+DOWNSTREAM_DIR="${RUN_DIR}/downstream"
+FINAL_DIR="${RUN_DIR}/final"
+RUN_METADATA_DIR="${RUN_DIR}/run_metadata"
+
+mkdir -p \
+  "$INPUT_DIR" \
+  "$WORKING_DIR" \
+  "$LOGS_DIR" \
+  "$QC_DIR" \
+  "$OUTPUTS_DIR" \
+  "$DOWNSTREAM_DIR" \
+  "$FINAL_DIR" \
+  "$RUN_METADATA_DIR"
+
+WRAP_LOG="${LOGS_DIR}/${WRAPPER_LOG_NAME}"
+
+########################################
+# metadata capture
+########################################
+
+cp -f "$CONFIG" "${RUN_METADATA_DIR}/resolved_config.env"
+cp -f "$MANIFEST_FILE" "${INPUT_DIR}/$(basename "$MANIFEST_FILE")"
+
+{
+  echo "run_id=${RUN_ID}"
+  echo "pipeline_name=${PIPELINE_NAME:-scrnaseq}"
+  echo "run_mode=${RUN_MODE:-unknown}"
+  echo "engine=${ENGINE}"
+  echo "config=${CONFIG}"
+  echo "manifest_file=${MANIFEST_FILE}"
+  echo "pipeline_root=${PIPELINE_ROOT}"
+  echo "runs_root=${RUNS_ROOT}"
+  echo "run_dir=${RUN_DIR}"
+  echo "timestamp=$(date '+%F %T')"
+  echo "operator=$(whoami)"
+} > "${RUN_METADATA_DIR}/run_manifest.txt"
+
+{
+  echo "git_branch=$(git -C "$PIPELINE_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo NA)"
+  echo "git_commit=$(git -C "$PIPELINE_ROOT" rev-parse HEAD 2>/dev/null || echo NA)"
+  echo "git_status=$(git -C "$PIPELINE_ROOT" status --short 2>/dev/null | wc -l | awk '{print ($1==0 ? "clean" : "dirty")}')"
+} > "${RUN_METADATA_DIR}/pipeline_version.txt"
+
+{
+  echo "date=$(date '+%F %T')"
+  echo -n "bash="; bash --version | head -n 1
+  echo -n "Rscript="; Rscript --version 2>&1 | head -n 1 || true
+  echo -n "STAR="; STAR --version 2>&1 | head -n 1 || true
+  echo -n "cellranger="; cellranger --version 2>&1 | head -n 1 || true
+} > "${RUN_METADATA_DIR}/software_versions.txt"
+
+{
+  echo "start_time=$(date '+%F %T')"
+  echo "status=started"
+} > "${RUN_METADATA_DIR}/start_end_status.txt"
+
+########################################
+# banner
+########################################
+
+log "=== scRNA-seq wrapper start ==="
+log "CONFIG=$CONFIG"
+log "ENGINE=$ENGINE"
+log "MANIFEST_FILE=$MANIFEST_FILE"
+log "RUN_ID=$RUN_ID"
+log "RUN_DIR=$RUN_DIR"
+log "THREADS=$THREADS"
+log "MEMORY_GB=$MEMORY_GB"
+log "RUN_PREPROCESS=$RUN_PREPROCESS"
+log "RUN_QC=$RUN_QC"
+log "RUN_DOWNSTREAM_CORE=$RUN_DOWNSTREAM_CORE"
+log "RUN_MARKERS=$RUN_MARKERS"
+log "RUN_ANNOTATION=$RUN_ANNOTATION"
+log "RUN_DIFFERENTIAL=$RUN_DIFFERENTIAL"
+log "RUN_PATHWAY=$RUN_PATHWAY"
+log "RUN_VISUALIZATION=$RUN_VISUALIZATION"
+log "RUN_REPORT=$RUN_REPORT"
+log "RUN_COMPARE_BACKENDS=$RUN_COMPARE_BACKENDS"
+
+########################################
+# engine-specific validation
+########################################
+
+case "${ENGINE,,}" in
+  cellranger)
+    require_var CELLRANGER_REF
+    require_dir "$CELLRANGER_REF"
+    command -v cellranger >/dev/null 2>&1 || { echo "ERROR: cellranger not found in PATH" >&2; exit 4; }
+    manifest_has_columns "$MANIFEST_FILE" run_id sample_id dataset fastq_path reference chemistry expected_cells notes
+    ;;
+  starsolo)
+    require_var STAR_INDEX
+    require_dir "$STAR_INDEX"
+    command -v STAR >/dev/null 2>&1 || { echo "ERROR: STAR not found in PATH" >&2; exit 4; }
+    manifest_has_columns "$MANIFEST_FILE" run_id fastq_dir sample_id chemistry
+    ;;
+esac
+
+########################################
+# dry run exit
+########################################
+
+if [[ "$DRY_RUN" == "1" ]]; then
+  log "DRY_RUN=1, validation complete, exiting before execution."
+  {
+    echo "end_time=$(date '+%F %T')"
+    echo "status=dry_run_validated"
+  } >> "${RUN_METADATA_DIR}/start_end_status.txt"
+  exit 0
+fi
+
+########################################
+# stage placeholders
+########################################
+
+if [[ "$RUN_PREPROCESS" == "1" ]]; then
+  log "PREPROCESS stage enabled"
+  log "TODO: dispatch engine-specific preprocessing"
+else
+  log "PREPROCESS stage disabled"
+fi
+
+if [[ "$RUN_QC" == "1" ]]; then
+  log "QC stage enabled"
+  log "TODO: dispatch QC scripts 01-09"
+else
+  log "QC stage disabled"
+fi
+
+if [[ "$RUN_DOWNSTREAM_CORE" == "1" ]]; then
+  log "DOWNSTREAM_CORE stage enabled"
+  log "TODO: dispatch downstream scripts 10-34"
+else
+  log "DOWNSTREAM_CORE stage disabled"
+fi
+
+if [[ "$RUN_MARKERS" == "1" ]]; then
+  log "MARKERS stage enabled"
+fi
+
+if [[ "$RUN_ANNOTATION" == "1" ]]; then
+  log "ANNOTATION stage enabled"
+fi
+
+if [[ "$RUN_DIFFERENTIAL" == "1" ]]; then
+  log "DIFFERENTIAL stage enabled"
+fi
+
+if [[ "$RUN_PATHWAY" == "1" ]]; then
+  log "PATHWAY stage enabled"
+fi
+
+if [[ "$RUN_VISUALIZATION" == "1" ]]; then
+  log "VISUALIZATION stage enabled"
+fi
+
+if [[ "$RUN_REPORT" == "1" ]]; then
+  log "REPORT stage enabled"
+fi
+
+if [[ "$RUN_COMPARE_BACKENDS" == "1" ]]; then
+  log "COMPARE_BACKENDS stage enabled"
+fi
+
+########################################
+# completion
+########################################
+
+log "=== scRNA-seq wrapper complete ==="
+
+{
+  echo "end_time=$(date '+%F %T')"
+  echo "status=completed"
+} >> "${RUN_METADATA_DIR}/start_end_status.txt"
+
+echo
+echo "Summary:"
+echo "  RUN_ID:   $RUN_ID"
+echo "  ENGINE:   $ENGINE"
+echo "  RUN_DIR:  $RUN_DIR"
+echo "  WRAPLOG:  $WRAP_LOG"

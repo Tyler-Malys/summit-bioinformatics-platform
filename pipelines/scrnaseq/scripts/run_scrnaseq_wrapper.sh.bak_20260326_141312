@@ -160,21 +160,6 @@ if [[ -z "$MANIFEST_FILE" ]]; then
   esac
 fi
 
-########################################
-# reference resolution
-########################################
-
-REF_ROOT="${REF_ROOT:-/home/summitadmin/refs}"
-ORGANISM="${ORGANISM:-}"
-GENOME_BUILD="${GENOME_BUILD:-}"
-ANNOTATION_VERSION="${ANNOTATION_VERSION:-}"
-
-if [[ -n "$ORGANISM" && -n "$GENOME_BUILD" && -n "$ANNOTATION_VERSION" ]]; then
-  REF_BASE="${REF_ROOT}/${ORGANISM}/${GENOME_BUILD}/${ANNOTATION_VERSION}"
-  STAR_INDEX="${STAR_INDEX:-${REF_BASE}/star_index}"
-  CELLRANGER_REF="${CELLRANGER_REF:-${REF_BASE}/cellranger_ref}"
-fi
-
 require_dir "$PIPELINE_ROOT"
 require_file "$MANIFEST_FILE"
 
@@ -236,11 +221,7 @@ cp -f "$MANIFEST_FILE" "${INPUT_DIR}/$(basename "$MANIFEST_FILE")"
   echo -n "bash="; bash --version | head -n 1
   echo -n "Rscript="; Rscript --version 2>&1 | head -n 1 || true
   echo -n "STAR="; STAR --version 2>&1 | head -n 1 || true
-  if [[ -n "${CELLRANGER_BIN:-}" ]]; then
-    echo -n "cellranger="; "$CELLRANGER_BIN" --version 2>&1 | head -n 1 || true
-  else
-    echo "cellranger=NA"
-  fi
+  echo -n "cellranger="; "$CELLRANGER_BIN" --version 2>&1 | head -n 1 || true
 } > "${RUN_METADATA_DIR}/software_versions.txt"
 
 {

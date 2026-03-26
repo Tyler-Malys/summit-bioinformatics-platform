@@ -4,55 +4,22 @@ suppressPackageStartupMessages({
   library(DESeq2)
 })
 
-args <- commandArgs(trailingOnly = TRUE)
-
-get_flag_value <- function(flag) {
-  idx <- match(flag, args)
-  if (is.na(idx)) return(NULL)
-  if (idx == length(args)) stop(paste0("ERROR: missing value after ", flag), call. = FALSE)
-  args[[idx + 1]]
-}
-
-print_usage <- function() {
-  cat("Usage:\n")
-  cat("  Rscript analysis/01_build_analysis_object.R \\\n")
-  cat("    --counts-path <gene_counts.csv> \\\n")
-  cat("    --out-dds <dds.rds> \\\n")
-  cat("    --out-vsd <vsd.rds>\n")
-}
-
-if ("-h" %in% args || "--help" %in% args) {
-  print_usage()
-  quit(status = 0, save = "no")
-}
-
 cat("---- Building Analysis-Ready DESeq2 Object ----\n")
 
 # ===============================
 # 1. Define Paths
 # ===============================
 
-counts_path <- get_flag_value("--counts-path")
-out_dds     <- get_flag_value("--out-dds")
-out_vsd     <- get_flag_value("--out-vsd")
+counts_path <- "results/tximport/txi_crc150_salmon_20260223/gene_counts.csv"
 
-if (is.null(counts_path) || is.null(out_dds) || is.null(out_vsd)) {
-  cat("ERROR: required args missing.\n\n")
-  print_usage()
-  quit(status = 2, save = "no")
-}
-
-if (!file.exists(counts_path)) {
-  stop(paste0("ERROR: counts file not found: ", counts_path), call. = FALSE)
-}
+out_dds <- "analysis_objects/dds_crc_vs_hep_20260225.rds"
+out_vsd <- "analysis_objects/vsd_crc_vs_hep_20260225.rds"
 
 # ===============================
 # 2. Load Gene Counts
 # ===============================
 
 cat("Loading counts from:", counts_path, "\n")
-cat("Output DDS:", out_dds, "\n")
-cat("Output VSD:", out_vsd, "\n")
 
 counts <- read.csv(
   counts_path,
@@ -171,8 +138,7 @@ cat("VST complete.\n")
 # ===============================
 # 9. Save Objects
 # ===============================
-dir.create(dirname(out_dds), showWarnings = FALSE, recursive = TRUE)
-dir.create(dirname(out_vsd), showWarnings = FALSE, recursive = TRUE)
+dir.create("analysis_objects", showWarnings = FALSE, recursive = TRUE)
 
 saveRDS(dds, out_dds)
 saveRDS(vsd, out_vsd)

@@ -9,7 +9,7 @@ suppressPackageStartupMessages({
 })
 
 # ----------------------------
-# Parameters (CLI overrides; required roots/inputs must be provided)
+# Parameters (CLI overrides)
 # ----------------------------
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -33,28 +33,19 @@ if (length(args) > 0) {
 }
 
 # Defaults (used if not provided via CLI)
-DE_CSV    <- opt$de_csv %||% ""
-RUN_ID    <- opt$run_id %||% format(Sys.Date(), "%Y%m%d")
-GMT_FILE  <- opt$gmt_file %||% ""
-GSEA_ROOT <- opt$gsea_root %||% ""
+DE_CSV  <- opt$de_csv  %||% "results/de/DESeq2_PooledCRC_vs_Hep_unshrunk.csv"
+RUN_ID  <- opt$run_id  %||% format(Sys.Date(), "%Y%m%d")
+GMT_FILE <- opt$gmt_file %||% file.path("results/gsea/msigdb", "REPLACE_WITH_GMT_FILENAME.gmt")
 
 RANK_BY <- opt$rank_by %||% "log2FoldChange"
 
 MIN_SIZE <- as.integer(opt$min_size %||% 15)
 MAX_SIZE <- as.integer(opt$max_size %||% 500)
 
-if (!nzchar(DE_CSV) || !nzchar(GMT_FILE) || !nzchar(GSEA_ROOT)) {
-  stop(
-    "Missing required args. Provide --de_csv=... --gmt_file=... --gsea_root=...",
-    call. = FALSE
-  )
-}
-
 # Where outputs go (derived)
-OUT_BASE  <- file.path(GSEA_ROOT, RUN_ID)
-OUT_RANKS <- file.path(GSEA_ROOT, "ranks")
-OUT_LOGS  <- file.path(GSEA_ROOT, "logs")
-OUT_MSIGDB <- file.path(GSEA_ROOT, "msigdb")
+OUT_BASE <- file.path("results/gsea", RUN_ID)
+OUT_RANKS <- file.path("results/gsea", "ranks")
+OUT_LOGS  <- file.path("results/gsea", "logs")
 
 # ----------------------------
 # Helpers
@@ -65,16 +56,11 @@ dir.create(OUT_LOGS,  recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(OUT_BASE, "tables"), recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(OUT_BASE, "plots"),  recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(OUT_BASE, "rds"),    recursive = TRUE, showWarnings = FALSE)
-dir.create(OUT_MSIGDB, recursive = TRUE, showWarnings = FALSE)
+dir.create(file.path("results/gsea", "msigdb"), recursive = TRUE, showWarnings = FALSE)
 
-if (!file.exists(DE_CSV)) {
-  stop(sprintf("DE file not found: %s", DE_CSV), call. = FALSE)
-}
+stopifnot(file.exists(DE_CSV))
 if (!file.exists(GMT_FILE)) {
-  stop(sprintf("GMT file not found: %s", GMT_FILE), call. = FALSE)
-}
-if (!dir.exists(GSEA_ROOT)) {
-  stop(sprintf("GSEA root directory not found: %s", GSEA_ROOT), call. = FALSE)
+  stop(sprintf("GMT file not found: %s\nPlace your MSigDB .gmt into results/gsea/msigdb/ and update GMT_FILE in this script.", GMT_FILE))
 }
 
 message("Reading DE file: ", DE_CSV)
@@ -84,7 +70,6 @@ message("---- fgsea run config ----")
 message("RUN_ID: ", RUN_ID)
 message("DE_CSV: ", normalizePath(DE_CSV))
 message("GMT_FILE: ", normalizePath(GMT_FILE))
-message("GSEA_ROOT: ", normalizePath(GSEA_ROOT))
 message("RANK_BY (requested): ", RANK_BY)
 message("MIN_SIZE: ", MIN_SIZE, " | MAX_SIZE: ", MAX_SIZE)
 message("--------------------------")

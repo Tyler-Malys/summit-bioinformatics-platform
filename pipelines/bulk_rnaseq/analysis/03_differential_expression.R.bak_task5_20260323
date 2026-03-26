@@ -4,44 +4,10 @@ suppressPackageStartupMessages({
   library(DESeq2)
 })
 
-args <- commandArgs(trailingOnly = TRUE)
-
-get_flag_value <- function(flag) {
-  idx <- match(flag, args)
-  if (is.na(idx)) return(NULL)
-  if (idx == length(args)) stop(paste0("ERROR: missing value after ", flag), call. = FALSE)
-  args[[idx + 1]]
-}
-
-print_usage <- function() {
-  cat("Usage:\n")
-  cat("  Rscript analysis/03_differential_expression.R \\\n")
-  cat("    --dds-path <dds.rds> \\\n")
-  cat("    --out-dir <output_dir>\n")
-}
-
-if ("-h" %in% args || "--help" %in% args) {
-  print_usage()
-  quit(status = 0, save = "no")
-}
-
-dds_path <- get_flag_value("--dds-path")
-out_dir  <- get_flag_value("--out-dir")
-
-if (is.null(dds_path) || is.null(out_dir)) {
-  cat("ERROR: required args missing.\n\n")
-  print_usage()
-  quit(status = 2, save = "no")
-}
-
-if (!file.exists(dds_path)) {
-  stop(paste0("ERROR: DDS file not found: ", dds_path), call. = FALSE)
-}
-
+dds_path <- "analysis_objects/dds_crc_vs_hep_20260225.rds"
+out_dir  <- "results/de"
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
-cat("Loading DDS object from:", dds_path, "\n")
-cat("Writing outputs to:", out_dir, "\n")
 dds <- readRDS(dds_path)
 
 cat("Loaded dds:", dds_path, "\n")

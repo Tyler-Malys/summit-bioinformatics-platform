@@ -5,50 +5,15 @@ suppressPackageStartupMessages({
   library(pheatmap)
 })
 
-args <- commandArgs(trailingOnly = TRUE)
-
-get_flag_value <- function(flag) {
-  idx <- match(flag, args)
-  if (is.na(idx)) return(NULL)
-  if (idx == length(args)) stop(paste0("ERROR: missing value after ", flag), call. = FALSE)
-  args[[idx + 1]]
-}
-
-print_usage <- function() {
-  cat("Usage:\n")
-  cat("  Rscript analysis/06_gsea_heatmaps.R \\\n")
-  cat("    --in-dir <summary_input_dir> \\\n")
-  cat("    --out-dir <figure_output_dir>\n")
-}
-
-if ("-h" %in% args || "--help" %in% args) {
-  print_usage()
-  quit(status = 0, save = "no")
-}
-
 message("Starting GSEA heatmap generation...")
 
 # ----------------------------
 # Directories
 # ----------------------------
 
-IN_DIR  <- get_flag_value("--in-dir")
-OUT_DIR <- get_flag_value("--out-dir")
-
-if (is.null(IN_DIR) || is.null(OUT_DIR)) {
-  cat("ERROR: required args missing.\n\n")
-  print_usage()
-  quit(status = 2, save = "no")
-}
-
-if (!dir.exists(IN_DIR)) {
-  stop(paste0("ERROR: summary input directory not found: ", IN_DIR), call. = FALSE)
-}
-
+IN_DIR  <- file.path("results", "gsea", "summary")
+OUT_DIR <- file.path("results", "gsea", "figures")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
-
-message("Reading summary inputs from: ", IN_DIR)
-message("Writing heatmap outputs to: ", OUT_DIR)
 
 # ----------------------------
 # Utility functions
