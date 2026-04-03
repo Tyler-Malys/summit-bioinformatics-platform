@@ -204,72 +204,6 @@ mkdir -p \
 
 WRAP_LOG="${LOGS_DIR}/${WRAPPER_LOG_NAME}"
 
-STAGE_LOG_DIR="${LOGS_DIR}/stages"
-STAGE_STATUS_DIR="${RUN_METADATA_DIR}/stage_status"
-mkdir -p "$STAGE_LOG_DIR" "$STAGE_STATUS_DIR"
-
-stage_marker_path() {
-  local stage_name="$1"
-  local marker_name="$2"
-  echo "${STAGE_STATUS_DIR}/${stage_name}.${marker_name}"
-}
-
-mark_stage_started() {
-  local stage_name="$1"
-  rm -f "$(stage_marker_path "$stage_name" completed)" \
-        "$(stage_marker_path "$stage_name" failed)"
-  : > "$(stage_marker_path "$stage_name" started)"
-}
-
-mark_stage_completed() {
-  local stage_name="$1"
-  : > "$(stage_marker_path "$stage_name" completed)"
-}
-
-mark_stage_failed() {
-  local stage_name="$1"
-  local exit_code="$2"
-  {
-    echo "stage=${stage_name}"
-    echo "exit_code=${exit_code}"
-    echo "timestamp=$(date '+%F %T')"
-  } > "$(stage_marker_path "$stage_name" failed)"
-}
-
-run_stage() {
-  local stage_name="$1"
-  shift
-
-  local stage_log="${STAGE_LOG_DIR}/${stage_name}.log"
-
-  log "START stage=${stage_name}"
-  mark_stage_started "$stage_name"
-
-  local rc=0
-  if "$@" > >(tee -a "$stage_log") 2> >(tee -a "$stage_log" >&2); then
-    rc=0
-  else
-    rc=$?
-  fi
-
-  if [[ $rc -ne 0 ]]; then
-    log "ERROR stage=${stage_name} exit_code=${rc}"
-    mark_stage_failed "$stage_name" "$rc"
-
-    {
-      echo "end_time=$(date '+%F %T')"
-      echo "status=failed"
-      echo "failed_stage=${stage_name}"
-      echo "exit_code=${rc}"
-    } >> "${RUN_METADATA_DIR}/start_end_status.txt"
-
-    exit $rc
-  fi
-
-  mark_stage_completed "$stage_name"
-  log "COMPLETE stage=${stage_name}"
-}
-
 ########################################
 # metadata capture
 ########################################
@@ -374,7 +308,6 @@ fi
 # stage placeholders
 ########################################
 
-run_preprocess_stage() {
 if [[ "$RUN_PREPROCESS" == "1" ]]; then
   log "PREPROCESS stage enabled"
 
@@ -490,9 +423,7 @@ if [[ "$RUN_PREPROCESS" == "1" ]]; then
 else
   log "PREPROCESS stage disabled"
 fi
-}
 
-run_qc_stage() {
 if [[ "$RUN_QC" == "1" ]]; then
   log "QC stage enabled"
 
@@ -630,9 +561,7 @@ if [[ "$RUN_QC" == "1" ]]; then
 else
   log "QC stage disabled"
 fi
-}
 
-run_downstream_core_stage() {
 if [[ "$RUN_DOWNSTREAM_CORE" == "1" ]]; then
   log "DOWNSTREAM_CORE stage enabled"
 
@@ -740,7 +669,6 @@ if [[ "$RUN_DOWNSTREAM_CORE" == "1" ]]; then
 else
   log "DOWNSTREAM_CORE stage disabled"
 fi
-}
 
 if [[ "$RUN_MARKERS" == "1" ]]; then
   log "MARKERS stage enabled"
@@ -766,7 +694,6 @@ if [[ "$RUN_REPORT" == "1" ]]; then
   log "REPORT stage enabled"
 fi
 
-run_compare_backends_stage() {
 if [[ "$RUN_COMPARE_BACKENDS" == "1" ]]; then
   log "COMPARE_BACKENDS stage enabled"
 
@@ -807,34 +734,6 @@ if [[ "$RUN_COMPARE_BACKENDS" == "1" ]]; then
     fi
 
   done
-fi
-}
-########################################
-# standardized stage execution
-########################################
-
-if [[ "$RUN_PREPROCESS" == "1" ]]; then
-  run_stage "preprocess" run_preprocess_stage
-else
-  log "PREPROCESS stage disabled"
-fi
-
-if [[ "$RUN_QC" == "1" ]]; then
-  run_stage "qc" run_qc_stage
-else
-  log "QC stage disabled"
-fi
-
-if [[ "$RUN_DOWNSTREAM_CORE" == "1" ]]; then
-  run_stage "downstream_core" run_downstream_core_stage
-else
-  log "DOWNSTREAM_CORE stage disabled"
-fi
-
-if [[ "$RUN_COMPARE_BACKENDS" == "1" ]]; then
-  run_stage "compare_backends" run_compare_backends_stage
-else
-  log "COMPARE_BACKENDS stage disabled"
 fi
 
 ########################################

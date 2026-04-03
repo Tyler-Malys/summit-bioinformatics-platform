@@ -8,8 +8,6 @@ set -euo pipefail
 THREADS=8
 RUN_ID=$(date +"%Y%m%d_%H%M%S")
 DRY_RUN=0
-FASTQC_BIN="${FASTQC_BIN:-$(command -v fastqc || true)}"
-MULTIQC_BIN="${MULTIQC_BIN:-$(command -v multiqc || true)}"
 
 ########################################
 # Parse arguments
@@ -105,18 +103,15 @@ fi
 ########################################
 echo "Checking required tools..."
 
-[[ -n "${FASTQC_BIN:-}" ]] || { echo "ERROR: fastqc not found"; exit 3; }
-[[ -x "$FASTQC_BIN" ]] || { echo "ERROR: FASTQC_BIN not executable: $FASTQC_BIN"; exit 3; }
-
-[[ -n "${MULTIQC_BIN:-}" ]] || { echo "ERROR: multiqc not found"; exit 3; }
-[[ -x "$MULTIQC_BIN" ]] || { echo "ERROR: MULTIQC_BIN not executable: $MULTIQC_BIN"; exit 3; }
+command -v fastqc >/dev/null 2>&1 || { echo "ERROR: fastqc not found"; exit 3; }
+command -v multiqc >/dev/null 2>&1 || { echo "ERROR: multiqc not found"; exit 3; }
 
 ########################################
 # Run FastQC
 ########################################
 echo "Running FastQC..."
 
-"$FASTQC_BIN" -t "$THREADS" -o "$RUN_DIR" "${FASTQS[@]}" \
+fastqc -t "$THREADS" -o "$RUN_DIR" "${FASTQS[@]}" \
   2>&1 | tee "${LOG_DIR}/fastqc.log"
 
 ########################################
@@ -124,7 +119,7 @@ echo "Running FastQC..."
 ########################################
 echo "Running MultiQC..."
 
-"$MULTIQC_BIN" "$RUN_DIR" -o "$RUN_DIR" \
+multiqc "$RUN_DIR" -o "$RUN_DIR" \
   2>&1 | tee "${LOG_DIR}/multiqc.log"
 
 ########################################
@@ -135,10 +130,8 @@ echo "Running MultiQC..."
   echo "QC run completed on $(date)"
   echo "Input directory: $INPUT_DIR"
   echo "Threads: $THREADS"
-  echo "fastqc_bin: $FASTQC_BIN"
-  echo "multiqc_bin: $MULTIQC_BIN"
-  echo "fastqc version: $("$FASTQC_BIN" --version 2>&1 || echo unknown)"
-  echo "multiqc version: $("$MULTIQC_BIN" --version 2>&1 || echo unknown)"
+  echo "fastqc version: $(fastqc --version 2>&1 || echo unknown)"
+  echo "multiqc version: $(multiqc --version 2>&1 || echo unknown)"
 } > "${RUN_DIR}/run_info.txt"
 
 echo "DONE"
