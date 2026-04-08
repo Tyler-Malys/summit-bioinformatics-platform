@@ -47,42 +47,12 @@ fi
 ########################################
 
 log() {
-  local level="INFO"
-
-  if [[ "$1" == "INFO" || "$1" == "WARN" || "$1" == "ERROR" ]]; then
-    level="$1"
-    shift
-  fi
-
-  local message="$*"
-  local ts
-  ts="$(date '+%Y-%m-%d %H:%M:%S')"
-
+  local msg="$*"
   if [[ "${WRITE_WRAPPER_LOG:-1}" == "1" ]]; then
-    if [[ -n "${CURRENT_STAGE:-}" ]]; then
-      echo "[$ts] $level stage=$CURRENT_STAGE message=\"$message\"" | tee -a "$WRAP_LOG"
-    else
-      echo "[$ts] $level message=\"$message\"" | tee -a "$WRAP_LOG"
-    fi
+    echo "[$(date '+%F %T')] $msg" | tee -a "$WRAP_LOG"
   else
-    if [[ -n "${CURRENT_STAGE:-}" ]]; then
-      echo "[$ts] $level stage=$CURRENT_STAGE message=\"$message\""
-    else
-      echo "[$ts] $level message=\"$message\""
-    fi
+    echo "[$(date '+%F %T')] $msg"
   fi
-}
-
-log_stage_line() {
-  local stage_name="$1"
-  local level="$2"
-  shift 2
-
-  local message="$*"
-  local ts
-  ts="$(date '+%Y-%m-%d %H:%M:%S')"
-
-  echo "[$ts] $level stage=$stage_name message=\"$message\""
 }
 
 require_var() {
@@ -187,9 +157,6 @@ normalize_bool RUN_COMPARE_BACKENDS
 START_STAGE="${START_STAGE:-}"
 END_STAGE="${END_STAGE:-}"
 RERUN_FAILED_ONLY="${RERUN_FAILED_ONLY:-false}"
-MIN_FREE_DISK_GB="${MIN_FREE_DISK_GB:-10}"
-MIN_FREE_MEM_GB="${MIN_FREE_MEM_GB:-4}"
-MIN_AVAILABLE_CPUS="${MIN_AVAILABLE_CPUS:-2}"
 
 ########################################
 # validate config
@@ -264,8 +231,6 @@ mkdir -p \
   "$RUN_METADATA_DIR"
 
 WRAP_LOG="${LOGS_DIR}/${WRAPPER_LOG_NAME}"
-START_TIME="$(date '+%F %T')"
-START_END_STATUS_FILE="${RUN_METADATA_DIR}/start_end_status.txt"
 
 STAGE_LOG_DIR="${LOGS_DIR}/stages"
 STAGE_STATUS_DIR="${RUN_METADATA_DIR}/stage_status"
@@ -297,48 +262,6 @@ mark_stage_failed() {
     echo "exit_code=${exit_code}"
     echo "timestamp=$(date '+%F %T')"
   } > "$(stage_marker_path "$stage_name" failed)"
-}
-
-get_free_disk_gb() {
-  local target_path="$1"
-  df -BG "$target_path" | awk 'NR==2 {gsub(/G/, "", $4); print $4}'
-}
-
-get_available_mem_gb() {
-  awk '/MemAvailable:/ {printf "%d\n", $2/1024/1024}' /proc/meminfo
-}
-
-get_available_cpus() {
-  nproc
-}
-
-validate_resources() {
-  local disk_gb
-  local mem_gb
-  local cpu_count
-
-  disk_gb="$(get_free_disk_gb "$RUN_DIR")"
-  mem_gb="$(get_available_mem_gb)"
-  cpu_count="$(get_available_cpus)"
-
-  log INFO "Resource check: free_disk_gb=$disk_gb min_required=$MIN_FREE_DISK_GB"
-  log INFO "Resource check: available_mem_gb=$mem_gb min_required=$MIN_FREE_MEM_GB"
-  log INFO "Resource check: available_cpus=$cpu_count min_required=$MIN_AVAILABLE_CPUS"
-
-  if [[ "$disk_gb" -lt "$MIN_FREE_DISK_GB" ]]; then
-    log ERROR "Insufficient disk space: free_disk_gb=$disk_gb required_gb=$MIN_FREE_DISK_GB"
-    exit 6
-  fi
-
-  if [[ "$mem_gb" -lt "$MIN_FREE_MEM_GB" ]]; then
-    log ERROR "Insufficient memory: available_mem_gb=$mem_gb required_gb=$MIN_FREE_MEM_GB"
-    exit 6
-  fi
-
-  if [[ "$cpu_count" -lt "$MIN_AVAILABLE_CPUS" ]]; then
-    log ERROR "Insufficient CPU availability: available_cpus=$cpu_count required_cpus=$MIN_AVAILABLE_CPUS"
-    exit 6
-  fi
 }
 
 stage_in_range() {
@@ -398,60 +321,39 @@ run_stage() {
   local stage_name="$1"
   shift
 
-  local stage_start_ts
-  local stage_end_ts
-  local duration
-  local exit_code
-
-  CURRENT_STAGE="$stage_name"
-
   local stage_log="${STAGE_LOG_DIR}/${stage_name}.log"
 
   if ! should_run_stage "$stage_name"; then
-    log INFO "SKIP"
-    CURRENT_STAGE=""
+    log "SKIP stage=${stage_name}"
     return 0
   fi
 
-  stage_start_ts="$(date +%s)"
-  log INFO "START"
-  log_stage_line "$stage_name" INFO "START" >> "$stage_log"
-
+  log "START stage=${stage_name}"
   mark_stage_started "$stage_name"
 
+  local rc=0
   if "$@" > >(tee -a "$stage_log") 2> >(tee -a "$stage_log" >&2); then
-    exit_code=0
+    rc=0
   else
-    exit_code=$?
+    rc=$?
   fi
 
-  stage_end_ts="$(date +%s)"
-  duration=$((stage_end_ts - stage_start_ts))
-
-  if [[ $exit_code -ne 0 ]]; then
-    log ERROR "exit_code=$exit_code detail=Stage failed"
-    log ERROR "END status=failure duration=${duration}s"
-
-    log_stage_line "$stage_name" ERROR "exit_code=$exit_code detail=Stage failed" >> "$stage_log"
-    log_stage_line "$stage_name" ERROR "END status=failure duration=${duration}s" >> "$stage_log"
-
-    mark_stage_failed "$stage_name" "$exit_code"
+  if [[ $rc -ne 0 ]]; then
+    log "ERROR stage=${stage_name} exit_code=${rc}"
+    mark_stage_failed "$stage_name" "$rc"
 
     {
       echo "end_time=$(date '+%F %T')"
       echo "status=failed"
       echo "failed_stage=${stage_name}"
-      echo "exit_code=${exit_code}"
-    } >> "$START_END_STATUS_FILE"
- 
-  exit $exit_code
- fi
+      echo "exit_code=${rc}"
+    } >> "${RUN_METADATA_DIR}/start_end_status.txt"
 
- mark_stage_completed "$stage_name"
- log INFO "END status=success duration=${duration}s"
- log_stage_line "$stage_name" INFO "END status=success duration=${duration}s" >> "$stage_log"
- 
-  CURRENT_STAGE=""
+    exit $rc
+  fi
+
+  mark_stage_completed "$stage_name"
+  log "COMPLETE stage=${stage_name}"
 }
 
 ########################################
@@ -494,9 +396,9 @@ cp -f "$MANIFEST_FILE" "${INPUT_DIR}/$(basename "$MANIFEST_FILE")"
 } > "${RUN_METADATA_DIR}/software_versions.txt"
 
 {
-  echo "start_time=${START_TIME}"
+  echo "start_time=$(date '+%F %T')"
   echo "status=started"
-} > "$START_END_STATUS_FILE"
+} > "${RUN_METADATA_DIR}/start_end_status.txt"
 
 ########################################
 # banner
@@ -540,7 +442,6 @@ case "${ENGINE,,}" in
     manifest_has_columns "$MANIFEST_FILE" run_id fastq_dir sample_id chemistry
     ;;
 esac
-validate_resources
 
 ########################################
 # dry run exit
@@ -549,10 +450,9 @@ validate_resources
 if [[ "$DRY_RUN" == "1" ]]; then
   log "DRY_RUN=1, validation complete, exiting before execution."
   {
-    echo "start_time=${START_TIME}"
     echo "end_time=$(date '+%F %T')"
     echo "status=dry_run_validated"
-  } > "$START_END_STATUS_FILE"
+  } >> "${RUN_METADATA_DIR}/start_end_status.txt"
   exit 0
 fi
 
@@ -1030,10 +930,9 @@ fi
 log "=== scRNA-seq wrapper complete ==="
 
 {
-  echo "start_time=${START_TIME}"
   echo "end_time=$(date '+%F %T')"
   echo "status=completed"
-} > "$START_END_STATUS_FILE"
+} >> "${RUN_METADATA_DIR}/start_end_status.txt"
 
 echo
 echo "Summary:"

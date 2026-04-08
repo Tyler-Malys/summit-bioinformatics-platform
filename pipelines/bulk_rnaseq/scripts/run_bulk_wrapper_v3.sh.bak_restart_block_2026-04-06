@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Bulk RNA-seq wrapper v4
-# Pipeline Modularity & Stage Architecture implementation
+# Bulk RNA-seq wrapper v3
+# Task 3 implementation: config-loader foundation for wrapper-driven execution
 # Runs: FastQC/MultiQC -> fastp -> Salmon -> tximport -> STAR
 # Default config: config/pipeline_v3.env
 
@@ -43,8 +43,6 @@ load_config "$CONFIG"
 default_var PIPELINE_ROOT "$PIPELINE_ROOT"
 default_var RUNS_ROOT "${PIPELINE_ROOT}/runs"
 default_var RAW_LOCAL_ROOT "${PIPELINE_ROOT}/data/raw_local"
-default_var FASTQC_BIN "/home/summitadmin/miniconda3/envs/bulk_qc_tools/bin/fastqc"
-default_var MULTIQC_BIN "/home/summitadmin/miniconda3/envs/bulk_qc_tools/bin/multiqc"
 QC_SCRIPT="${PIPELINE_ROOT}/scripts/qc_fastq.sh"
 TRIM_SCRIPT="${PIPELINE_ROOT}/scripts/trim_fastp.sh"
 SALMON_SCRIPT="${PIPELINE_ROOT}/scripts/salmon_quant.sh"
@@ -83,16 +81,6 @@ default_var SKIP_BAD_FASTQS "${ANALYSIS_SKIP_BAD_FASTQS:-${SKIP_BAD_FASTQS:-1}}"
 default_var RAW_SRC_DIR "${INPUT_RAW_SOURCE_DIR:-${RAW_SOURCE_DIR:-${RAW_SRC_DIR:-$PILOT_FASTQ_DIR}}}"
 default_var SALMON_INPUT "${ANALYSIS_SALMON_INPUT:-${SALMON_INPUT_MODE:-${SALMON_INPUT:-trimmed}}}"
 default_var STAR_INPUT "${ANALYSIS_STAR_INPUT:-${STAR_INPUT_MODE:-${STAR_INPUT:-trimmed}}}"
-
-# ========================================
-# Restart / Execution Control
-# ========================================
-default_var START_STAGE ""
-default_var END_STAGE ""
-default_var RERUN_FAILED_ONLY "false"
-default_var MIN_FREE_DISK_GB "10"
-default_var MIN_FREE_MEM_GB "4"
-default_var MIN_AVAILABLE_CPUS "2"
 
 # ========================================
 # Reference auto-resolution (config-driven)
@@ -181,18 +169,12 @@ mkdir -p \
   "$FINAL_DIR" \
   "$RUN_METADATA_DIR"
 
-STAGE_LOG_DIR="${LOGS_DIR}/stages"
-STAGE_STATUS_DIR="${RUN_METADATA_DIR}/stage_status"
-mkdir -p "$STAGE_LOG_DIR" "$STAGE_STATUS_DIR"
-
 # Default input for downstream steps = raw fastqs
 PROC_FASTQ_DIR="$PILOT_FASTQ_DIR"
 
 # Wrapper log inside canonical run tree
 WRAP_DIR="$RUN_DIR"
 WRAP_LOG="${LOGS_DIR}/wrapper.log"
-START_TIME="$(date '+%F %T')"
-START_END_STATUS_FILE="${RUN_METADATA_DIR}/start_end_status.txt"
 
 # Resolved runtime configuration summary
 echo "=== WRAPPER RUN ===" | tee -a "$WRAP_LOG"
@@ -240,9 +222,9 @@ cp -f "$CONFIG" "${RUN_METADATA_DIR}/resolved_config.env"
 } > "${RUN_METADATA_DIR}/software_versions.txt"
 
 {
-  echo "start_time=${START_TIME}"
+  echo "start_time=$(date '+%F %T')"
   echo "status=started"
-} > "$START_END_STATUS_FILE"
+} > "${RUN_METADATA_DIR}/start_end_status.txt"
 
 # --- helpers / boolean handling / logging ---
 is_true() {
@@ -252,228 +234,15 @@ is_true() {
   esac
 }
 
-log() {
-  local level="INFO"
-
-  if [[ "$1" == "INFO" || "$1" == "WARN" || "$1" == "ERROR" ]]; then
-    level="$1"
-    shift
-  fi
-
-  local message="$*"
-  local ts
-  ts="$(date '+%Y-%m-%d %H:%M:%S')"
-
-  if [[ -n "${CURRENT_STAGE:-}" ]]; then
-    echo "[$ts] $level stage=$CURRENT_STAGE message=\"$message\"" | tee -a "$WRAP_LOG"
-  else
-    echo "[$ts] $level message=\"$message\"" | tee -a "$WRAP_LOG"
-  fi
-}
-
-log_stage_line() {
-  local stage_name="$1"
-  local level="$2"
-  shift 2
-
-  local message="$*"
-  local ts
-  ts="$(date '+%Y-%m-%d %H:%M:%S')"
-
-  echo "[$ts] $level stage=$stage_name message=\"$message\""
-}
-
-get_free_disk_gb() {
-  local target_path="$1"
-  df -BG "$target_path" | awk 'NR==2 {gsub(/G/, "", $4); print $4}'
-}
-
-get_available_mem_gb() {
-  awk '/MemAvailable:/ {printf "%d\n", $2/1024/1024}' /proc/meminfo
-}
-
-get_available_cpus() {
-  nproc
-}
-
-validate_resources() {
-  local disk_gb
-  local mem_gb
-  local cpu_count
-
-  disk_gb="$(get_free_disk_gb "$RUN_DIR")"
-  mem_gb="$(get_available_mem_gb)"
-  cpu_count="$(get_available_cpus)"
-
-  log INFO "Resource check: free_disk_gb=$disk_gb min_required=$MIN_FREE_DISK_GB"
-  log INFO "Resource check: available_mem_gb=$mem_gb min_required=$MIN_FREE_MEM_GB"
-  log INFO "Resource check: available_cpus=$cpu_count min_required=$MIN_AVAILABLE_CPUS"
-
-  if [[ "$disk_gb" -lt "$MIN_FREE_DISK_GB" ]]; then
-    log ERROR "Insufficient disk space: free_disk_gb=$disk_gb required_gb=$MIN_FREE_DISK_GB"
-    exit 6
-  fi
-
-  if [[ "$mem_gb" -lt "$MIN_FREE_MEM_GB" ]]; then
-    log ERROR "Insufficient memory: available_mem_gb=$mem_gb required_gb=$MIN_FREE_MEM_GB"
-    exit 6
-  fi
-
-  if [[ "$cpu_count" -lt "$MIN_AVAILABLE_CPUS" ]]; then
-    log ERROR "Insufficient CPU availability: available_cpus=$cpu_count required_cpus=$MIN_AVAILABLE_CPUS"
-    exit 6
-  fi
-}
-
-stage_marker_path() {
-  local stage_name="$1"
-  local marker_name="$2"
-  echo "${STAGE_STATUS_DIR}/${stage_name}.${marker_name}"
-}
-
-mark_stage_started() {
-  local stage_name="$1"
-  rm -f "$(stage_marker_path "$stage_name" completed)" \
-        "$(stage_marker_path "$stage_name" failed)"
-  : > "$(stage_marker_path "$stage_name" started)"
-}
-
-mark_stage_completed() {
-  local stage_name="$1"
-  : > "$(stage_marker_path "$stage_name" completed)"
-}
-
-mark_stage_failed() {
-  local stage_name="$1"
-  local exit_code="$2"
-  {
-    echo "stage=${stage_name}"
-    echo "exit_code=${exit_code}"
-    echo "timestamp=$(date '+%F %T')"
-  } > "$(stage_marker_path "$stage_name" failed)"
-}
-
-stage_in_range() {
-  local stage="$1"
-
-  if [[ -n "$START_STAGE" && -z "${__START_REACHED:-}" ]]; then
-    if [[ "$stage" == "$START_STAGE" ]]; then
-      __START_REACHED=1
-    else
-      return 1
-    fi
-  fi
-
-  if [[ -n "$END_STAGE" && -n "${__END_REACHED:-}" ]]; then
-    return 1
-  fi
-
-  if [[ -n "$END_STAGE" && "$stage" == "$END_STAGE" ]]; then
-    __END_REACHED=1
-  fi
-
-  return 0
-}
-
-should_run_stage() {
-  local stage="$1"
-
-  local completed
-  local failed
-  local started
-
-  completed="$(stage_marker_path "$stage" completed)"
-  failed="$(stage_marker_path "$stage" failed)"
-  started="$(stage_marker_path "$stage" started)"
-
-  if ! stage_in_range "$stage"; then
-    return 1
-  fi
-
-  if is_true "$RERUN_FAILED_ONLY"; then
-    [[ -f "$failed" ]] && return 0
-    return 1
-  fi
-
-  if [[ -f "$completed" ]]; then
-    return 1
-  fi
-
-  if [[ -f "$started" && ! -f "$completed" ]]; then
-    return 0
-  fi
-
-  return 0
-}
-
-run_stage() {
-  local stage_name="$1"
-  shift
-
-  local stage_start_ts
-  local stage_end_ts
-  local duration
-  local exit_code
-
-  CURRENT_STAGE="$stage_name"
-
-  local stage_log="${STAGE_LOG_DIR}/${stage_name}.log"
-
-  if ! should_run_stage "$stage_name"; then
-    log INFO "SKIP"
-    CURRENT_STAGE=""
-    return 0
-  fi
-
-  stage_start_ts="$(date +%s)"
-  log INFO "START"
-  log_stage_line "$stage_name" INFO "START" >> "$stage_log"
-
-  mark_stage_started "$stage_name"
-
-  if "$@" > >(tee -a "$stage_log") 2> >(tee -a "$stage_log" >&2); then
-    exit_code=0
-  else
-    exit_code=$?
-  fi
-
-  stage_end_ts="$(date +%s)"
-  duration=$((stage_end_ts - stage_start_ts))
-
-  if [[ $exit_code -ne 0 ]]; then
-    log ERROR "exit_code=$exit_code detail=Stage failed"
-    log ERROR "END status=failure duration=${duration}s"
-
-    log_stage_line "$stage_name" ERROR "exit_code=$exit_code detail=Stage failed" >> "$stage_log"
-    log_stage_line "$stage_name" ERROR "END status=failure duration=${duration}s" >> "$stage_log"
-
-    mark_stage_failed "$stage_name" "$exit_code"
-
-    {
-      echo "end_time=$(date '+%F %T')"
-      echo "status=failed"
-      echo "failed_stage=${stage_name}"
-      echo "exit_code=${exit_code}"
-    } >> "$START_END_STATUS_FILE"
-
-    exit $exit_code
-  fi
-
-  mark_stage_completed "$stage_name"
-
-  log INFO "END status=success duration=${duration}s"
-  log_stage_line "$stage_name" INFO "END status=success duration=${duration}s" >> "$stage_log"
-
-  CURRENT_STAGE=""
-}
+log() { echo "[$(date '+%F %T')] $*" | tee -a "$WRAP_LOG"; }
 
 ########################################
 # 0) LOCALIZE RAW FASTQS (staging -> ext4)
 ########################################
-log INFO "=== STAGE 0: LOCALIZE RAW FASTQS ==="
+log "=== STAGE 0: LOCALIZE RAW FASTQS ==="
 if is_true "$DO_LOCALIZE_RAW"; then
-  log INFO "RAW_SRC_DIR=$RAW_SRC_DIR"
-  log INFO "RAW_LOCAL_ROOT=$RAW_LOCAL_ROOT"
+  log "RAW_SRC_DIR=$RAW_SRC_DIR"
+  log "RAW_LOCAL_ROOT=$RAW_LOCAL_ROOT"
   [[ -d "$RAW_SRC_DIR" ]] || { echo "ERROR: RAW_SRC_DIR not found: $RAW_SRC_DIR" >&2; exit 3; }
 
   RAW_LOCAL_DIR="${RAW_LOCAL_ROOT}/${RUN_ID}"
@@ -504,9 +273,9 @@ if is_true "$DO_LOCALIZE_RAW"; then
     done
     shopt -u nullglob
 
-  log INFO "Localized FASTQs: $(ls -1 "$RAW_LOCAL_DIR"/*.gz 2>/dev/null | wc -l)"
+  log "Localized FASTQs: $(ls -1 "$RAW_LOCAL_DIR"/*.gz 2>/dev/null | wc -l)"
 else
-  log INFO "LOCALIZE skipped (DO_LOCALIZE_RAW=$DO_LOCALIZE_RAW)"
+  log "LOCALIZE skipped (DO_LOCALIZE_RAW=$DO_LOCALIZE_RAW)"
   RAW_LOCAL_DIR="$PILOT_FASTQ_DIR"
 fi
 echo | tee -a "$WRAP_LOG"
@@ -521,7 +290,7 @@ mkdir -p "$INTEGRITY_DIR"
 : > "$OK_FASTQS"
 : > "$BAD_FASTQS"
 
-log INFO "=== STAGE 0b: INTEGRITY CHECK (gzip -t) ==="
+log "=== STAGE 0b: INTEGRITY CHECK (gzip -t) ==="
 if is_true "$DO_INTEGRITY"; then
   shopt -s nullglob
   for f in "$RAW_LOCAL_DIR"/*.fq.gz "$RAW_LOCAL_DIR"/*.fastq.gz; do
@@ -529,15 +298,15 @@ if is_true "$DO_INTEGRITY"; then
       echo "$f" >> "$OK_FASTQS"
     else
       echo "$f" >> "$BAD_FASTQS"
-      log WARN "BAD gzip stream: $f"
+      log "BAD gzip stream: $f"
     fi
   done
   shopt -u nullglob
 
-  log INFO "Integrity OK: $(wc -l < "$OK_FASTQS")"
-  log INFO "Integrity BAD: $(wc -l < "$BAD_FASTQS")"
+  log "Integrity OK:  $(wc -l < "$OK_FASTQS")"
+  log "Integrity BAD: $(wc -l < "$BAD_FASTQS")"
 else
-  log INFO "INTEGRITY skipped (DO_INTEGRITY=$DO_INTEGRITY)"
+  log "INTEGRITY skipped (DO_INTEGRITY=$DO_INTEGRITY)"
 fi
 echo | tee -a "$WRAP_LOG"
 
@@ -547,12 +316,12 @@ echo | tee -a "$WRAP_LOG"
 FILTER_DIR="$WORKING_DIR/filtered_fastqs"
 mkdir -p "$FILTER_DIR"
 
-log INFO "=== STAGE 0c: FILTER FASTQS (based on integrity) ==="
+log "=== STAGE 0c: FILTER FASTQS (based on integrity) ==="
 if is_true "$DO_INTEGRITY"; then
   bad_n=$(wc -l < "$BAD_FASTQS" | tr -d ' ')
   if [[ "$bad_n" -gt 0 ]]; then
     if is_true "$SKIP_BAD_FASTQS"; then
-      log WARN "BAD FASTQs detected ($bad_n). SKIP_BAD_FASTQS=1 => excluding them from downstream steps."
+      log "BAD FASTQs detected ($bad_n). SKIP_BAD_FASTQS=1 => excluding them from downstream steps."
     else
       echo "ERROR: BAD FASTQs detected ($bad_n) and SKIP_BAD_FASTQS=0. Aborting." >&2
       exit 9
@@ -573,9 +342,9 @@ if is_true "$DO_INTEGRITY"; then
   fi
 
   RAW_LOCAL_DIR="$FILTER_DIR"
-  log INFO "Downstream input set to filtered dir: $RAW_LOCAL_DIR (files=$(ls -1 "$RAW_LOCAL_DIR"/*.gz 2>/dev/null | wc -l))"
+  log "Downstream input set to filtered dir: $RAW_LOCAL_DIR (files=$(ls -1 "$RAW_LOCAL_DIR"/*.gz 2>/dev/null | wc -l))"
 else
-  log INFO "FILTER skipped (DO_INTEGRITY=$DO_INTEGRITY)"
+  log "FILTER skipped (DO_INTEGRITY=$DO_INTEGRITY)"
 fi
 echo | tee -a "$WRAP_LOG"
 
@@ -584,15 +353,15 @@ echo | tee -a "$WRAP_LOG"
 : "${STAR_INPUT:=trimmed}"
 
 if is_true "$DO_SALMON" || is_true "$DO_TXIMPORT"; then
-  log INFO "SALMON_INPUT=$SALMON_INPUT"
+  echo "SALMON_INPUT=$SALMON_INPUT" | tee -a "$WRAP_LOG"
 else
-  log INFO "SALMON_INPUT=NA (DO_SALMON=$DO_SALMON)"
+  echo "SALMON_INPUT=NA (DO_SALMON=$DO_SALMON)" | tee -a "$WRAP_LOG"
 fi
 
 if is_true "$DO_STAR"; then
-  log INFO "STAR_INPUT=$STAR_INPUT"
+  echo "STAR_INPUT=$STAR_INPUT" | tee -a "$WRAP_LOG"
 else
-  log INFO "STAR_INPUT=NA (DO_STAR=$DO_STAR)"
+  echo "STAR_INPUT=NA (DO_STAR=$DO_STAR)" | tee -a "$WRAP_LOG"
 fi
 
 echo | tee -a "$WRAP_LOG"
@@ -610,11 +379,8 @@ fi
 
 # --- tool checks (only for enabled stages) ---
 if is_true "$DO_QC_RAW" || is_true "$DO_QC_POSTTRIM"; then
-  [[ -n "${FASTQC_BIN:-}" ]] || { echo "ERROR: FASTQC_BIN is empty" >&2; exit 5; }
-  [[ -x "$FASTQC_BIN" ]] || { echo "ERROR: FASTQC_BIN not executable: $FASTQC_BIN" >&2; exit 5; }
-
-  [[ -n "${MULTIQC_BIN:-}" ]] || { echo "ERROR: MULTIQC_BIN is empty" >&2; exit 5; }
-  [[ -x "$MULTIQC_BIN" ]] || { echo "ERROR: MULTIQC_BIN not executable: $MULTIQC_BIN" >&2; exit 5; }
+  command -v fastqc  >/dev/null || { echo "ERROR: fastqc not found in PATH"  >&2; exit 5; }
+  command -v multiqc >/dev/null || { echo "ERROR: multiqc not found in PATH" >&2; exit 5; }
 fi
 
 if is_true "$DO_TRIM"; then
@@ -654,22 +420,17 @@ if is_true "$DO_STAR"; then
   [[ -x "$STAR_SCRIPT" ]] || { echo "ERROR: $STAR_SCRIPT not found or not executable" >&2; exit 5; }
 fi
 
-export FASTQC_BIN
-export MULTIQC_BIN
-
-validate_resources
-
 ########################################
 # 1) QC
 ########################################
 log "=== STAGE 1: QC RAW (FastQC + MultiQC) ==="
 if is_true "$DO_QC_RAW"; then
-  run_stage "qc_raw" \
-    "$QC_SCRIPT" \
+  "$QC_SCRIPT" \
     -i "$RAW_LOCAL_DIR" \
     -o "$QC_OUT_ROOT" \
     --run-id "qc_${RUN_ID}" \
-    -t "$THREADS"
+    -t "$THREADS" \
+    2>&1 | tee -a "$WRAP_LOG"
 
   QC_RUN_DIR="${QC_OUT_ROOT}/qc_${RUN_ID}"
   log "QC_RUN_DIR=$QC_RUN_DIR"
@@ -683,30 +444,18 @@ echo | tee -a "$WRAP_LOG"
 ########################################
 log "=== STAGE 2: TRIM (fastp) ==="
 if is_true "$DO_TRIM"; then
-  run_stage "trim_fastp" \
-    "$TRIM_SCRIPT" \
+  "$TRIM_SCRIPT" \
     -i "$RAW_LOCAL_DIR" \
     -o "$TRIM_OUT_ROOT" \
     --run-id "trim_${RUN_ID}" \
-    -t "$THREADS"
+    -t "$THREADS" \
+    2>&1 | tee -a "$WRAP_LOG"
 
-TRIM_RUN_DIR="${TRIM_OUT_ROOT}/trim_${RUN_ID}"
+  TRIM_RUN_DIR="${TRIM_OUT_ROOT}/trim_${RUN_ID}"
+  log "TRIM_RUN_DIR=$TRIM_RUN_DIR"
 
-if [[ ! -d "$TRIM_RUN_DIR" ]]; then
-  log "TRIM_RUN_DIR not found for current RUN_ID, attempting fallback"
-
-  TRIM_RUN_DIR="$(ls -dt ${TRIM_OUT_ROOT}/trim_* 2>/dev/null | head -n 1 || true)"
-
-  if [[ -z "$TRIM_RUN_DIR" || ! -d "$TRIM_RUN_DIR" ]]; then
-    echo "ERROR: No existing TRIM_RUN_DIR found for fallback" >&2
-    exit 4
-  fi
-
-  log "Using fallback TRIM_RUN_DIR=$TRIM_RUN_DIR"
-fi
-
-PROC_FASTQ_DIR="$TRIM_RUN_DIR"
-log "PROC_FASTQ_DIR=$PROC_FASTQ_DIR"
+  # Default processed fastq dir for downstream stages
+  PROC_FASTQ_DIR="$TRIM_RUN_DIR"
 else
   log "TRIM skipped (DO_TRIM=$DO_TRIM)"
   # Leave PROC_FASTQ_DIR as raw
@@ -718,12 +467,12 @@ echo | tee -a "$WRAP_LOG"
 ########################################
 log "=== STAGE 2b: QC POST-TRIM (FastQC + MultiQC) ==="
 if is_true "$DO_QC_POSTTRIM"; then
-  run_stage "qc_posttrim" \
-    "$QC_SCRIPT" \
+  "$QC_SCRIPT" \
     -i "$PROC_FASTQ_DIR" \
     -o "$QC_OUT_ROOT" \
     --run-id "qc_posttrim_${RUN_ID}" \
-    -t "$THREADS"
+    -t "$THREADS" \
+    2>&1 | tee -a "$WRAP_LOG"
 
   QC_POSTTRIM_RUN_DIR="${QC_OUT_ROOT}/qc_posttrim_${RUN_ID}"
   log "QC_POSTTRIM_RUN_DIR=$QC_POSTTRIM_RUN_DIR"
@@ -780,13 +529,13 @@ if is_true "$DO_SALMON"; then
     exit 4
   fi
 
-  run_stage "salmon_quant" \
-    "$SALMON_SCRIPT" \
+  "$SALMON_SCRIPT" \
     -i "$SALMON_INPUT_DIR" \
     -o "$SALMON_OUT_ROOT" \
     --run-id "salmon_${RUN_ID}" \
     -t "$THREADS" \
-    -r "$SALMON_INDEX"
+    -r "$SALMON_INDEX" \
+    2>&1 | tee -a "$WRAP_LOG"
 
   SALMON_RUN_DIR="${SALMON_OUT_ROOT}/salmon_${RUN_ID}"
   log "SALMON_RUN_DIR=$SALMON_RUN_DIR"
@@ -810,12 +559,12 @@ if is_true "$DO_TXIMPORT"; then
   fi
   log "TXIMPORT reading Salmon dir: $SALMON_RUN_DIR"
 
-  run_stage "tximport_genelevel" \
-    Rscript "$TXIMPORT_SCRIPT" \
+  Rscript "$TXIMPORT_SCRIPT" \
     -i "$SALMON_RUN_DIR" \
     -o "$TXIMPORT_OUT_ROOT" \
     -m "$TX2GENE" \
-    --run-id "txi_${RUN_ID}"
+    --run-id "txi_${RUN_ID}" \
+    2>&1 | tee -a "$WRAP_LOG"
 
   TXI_RUN_DIR="${TXIMPORT_OUT_ROOT}/txi_${RUN_ID}"
   log "TXI_RUN_DIR=$TXI_RUN_DIR"
@@ -828,7 +577,7 @@ echo | tee -a "$WRAP_LOG"
 # 5) STAR
 ########################################
 if is_true "$DO_STAR"; then
-  log "=== STAGE 5: STAR ALIGNMENT [input=$STAR_INPUT] ==="
+  log "=== STAGE 5: STAR (align) [input=$STAR_INPUT] ==="
   if [[ -z "${STAR_INPUT_DIR:-}" ]]; then
     echo "ERROR: STAR_INPUT_DIR is empty; cannot run STAR" >&2
     exit 4
@@ -838,13 +587,13 @@ if is_true "$DO_STAR"; then
     exit 4
   fi
 
-  run_stage "star_align" \
-    "$STAR_SCRIPT" \
+  "$STAR_SCRIPT" \
     -i "$STAR_INPUT_DIR" \
     -o "$STAR_OUT_ROOT" \
     --run-id "star_${RUN_ID}" \
     -t "$THREADS" \
-    -r "$STAR_INDEX"
+    -r "$STAR_INDEX" \
+    2>&1 | tee -a "$WRAP_LOG"
 
   STAR_RUN_DIR="${STAR_OUT_ROOT}/star_${RUN_ID}"
   log "STAR_RUN_DIR=$STAR_RUN_DIR"
@@ -853,14 +602,13 @@ else
 fi
 echo | tee -a "$WRAP_LOG"
 
-{
-  echo "start_time=${START_TIME}"
-  echo "end_time=$(date '+%F %T')"
-  echo "status=completed"
-} > "$START_END_STATUS_FILE"
-
 echo "=== WRAPPER DONE ===" | tee -a "$WRAP_LOG"
 date | tee -a "$WRAP_LOG"
+
+{
+  echo "end_time=$(date '+%F %T')"
+  echo "status=completed"
+} >> "${RUN_METADATA_DIR}/start_end_status.txt"
 
 echo
 echo "Summary:"
