@@ -190,18 +190,18 @@ pooled_key <- "crc_vs_hep_pooled"
 contrast_order <- c("crc_vs_hep_pooled", "sw48_vs_hep", "sw480_vs_hep", "sw1116_vs_hep")
 
 # Reorder pivoted columns into a stable, human-friendly order (if present)
-nes_cols  <- paste0("NES_", contrast_order)
-padj_cols <- paste0("padj_", contrast_order)
-dir_cols  <- paste0("direction_", contrast_order)
+nes_cols  <- paste0(contrast_order, "_NES")
+padj_cols <- paste0(contrast_order, "_padj")
+dir_cols  <- paste0(contrast_order, "_direction")
 
 keep_nes  <- nes_cols[nes_cols %in% names(wide)]
 keep_padj <- padj_cols[padj_cols %in% names(wide)]
 keep_dir  <- dir_cols[dir_cols %in% names(wide)]
 
-nes_pooled_col <- paste0("NES_", pooled_key)
+nes_pooled_col <- paste0(pooled_key, "_NES")
 if (nes_pooled_col %in% names(wide)) {
   for (c in setdiff(keep_nes, nes_pooled_col)) {
-    delta_name <- sub("^NES_", "dNES_vs_pooled_", c)
+    delta_name <- sub("_NES$", "_dNES_vs_pooled", c)
     wide[, (delta_name) := get(c) - get(nes_pooled_col)]
   }
 }
@@ -220,7 +220,7 @@ if (length(delta_cols) > 0) {
     x <- unlist(.SD)
     nm <- names(x)
     nm <- nm[!is.na(x)]
-    if (length(nm) == 0) NA_character_ else sub("^dNES_vs_pooled_", "", nm[which.min(abs(x[nm]))])
+    if (length(nm) == 0) NA_character_ else sub("_dNES_vs_pooled$", "", nm[which.min(abs(x[nm]))])
   }, by = pathway, .SDcols = delta_cols]
 }
 
@@ -230,24 +230,27 @@ if (length(delta_cols) > 0) {
     x <- unlist(.SD)
     nm <- names(x)
     nm <- nm[!is.na(x)]
-    if (length(nm) == 0) NA_character_ else sub("^dNES_vs_pooled_", "", nm[which.max(abs(x[nm]))])
+    if (length(nm) == 0) NA_character_ else sub("_dNES_vs_pooled$", "", nm[which.max(abs(x[nm]))])
   }, by = pathway, .SDcols = delta_cols]
 }
 
 # Reorder columns: pathway, NES*, padj*, direction*, then deltas
 delta_cols <- grep("^dNES_vs_pooled_", names(wide), value = TRUE)
 
-setcolorder(
-  wide,
-  c("pathway",
-    keep_nes,
-    keep_padj,
-    keep_dir,
-    delta_cols,
-    "NES_range",
-    "closest_to_pooled",
-    "most_divergent_from_pooled")
+col_order <- c(
+  "pathway",
+  keep_nes,
+  keep_padj,
+  keep_dir,
+  delta_cols,
+  "NES_range",
+  "closest_to_pooled",
+  "most_divergent_from_pooled"
 )
+
+col_order <- col_order[col_order %in% names(wide)]
+
+setcolorder(wide, col_order)
 
 # Helpful ordering: by absolute pooled NES (if present), else alphabetic
 if (nes_pooled_col %in% names(wide)) {
@@ -266,7 +269,7 @@ message("Wrote: ", basename(out_wide))
 # Ranked summary: Top 10 Hallmark by pooled |NES| (fallback: mean |NES|)
 # ----------------------------
 
-pooled_col <- paste0("NES_", pooled_key)
+pooled_col <- paste0(pooled_key, "_NES")
 nes_cols_present <- grep("^NES_", names(wide), value = TRUE)
 
 wide_rank_h <- copy(wide)
@@ -275,7 +278,7 @@ if (pooled_col %in% names(wide_rank_h)) {
   wide_rank_h[, pooled_abs_NES := abs(get(pooled_col))]
 } else {
   # fallback if pooled is absent: mean(|NES|) over available NES columns
-  wide_rank_h[, pooled_abs_NES := rowMeans(abs(as.matrix(.SD)), na.rm = TRUE), .SDcols = nes_cols_present]
+  wide_rank_h[, pooled_abs_NES := if (length(nes_cols_present) > 0) rowMeans(abs(as.matrix(.SD)), na.rm = TRUE) else NA_real_, .SDcols = nes_cols_present]
 }
 
 top10_hallmark <- wide_rank_h[order(-pooled_abs_NES)][1:min(10, .N)]
@@ -302,19 +305,19 @@ wide_r <- dcast(
 pooled_key <- "crc_vs_hep_pooled"
 contrast_order <- c("crc_vs_hep_pooled", "sw48_vs_hep", "sw480_vs_hep", "sw1116_vs_hep")
 
-nes_cols  <- paste0("NES_", contrast_order)
-padj_cols <- paste0("padj_", contrast_order)
-dir_cols  <- paste0("direction_", contrast_order)
+nes_cols  <- paste0(contrast_order, "_NES")
+padj_cols <- paste0(contrast_order, "_padj")
+dir_cols  <- paste0(contrast_order, "_direction")
 
 keep_nes  <- nes_cols[nes_cols %in% names(wide_r)]
 keep_padj <- padj_cols[padj_cols %in% names(wide_r)]
 keep_dir  <- dir_cols[dir_cols %in% names(wide_r)]
 
-nes_pooled_col <- paste0("NES_", pooled_key)
+nes_pooled_col <- paste0(pooled_key, "_NES")
 
 if (nes_pooled_col %in% names(wide_r)) {
   for (c in setdiff(keep_nes, nes_pooled_col)) {
-    delta_name <- sub("^NES_", "dNES_vs_pooled_", c)
+    delta_name <- sub("_NES$", "_dNES_vs_pooled", c)
     wide_r[, (delta_name) := get(c) - get(nes_pooled_col)]
   }
 }
@@ -327,39 +330,44 @@ if (length(keep_nes) >= 2) {
 
 delta_cols <- grep("^dNES_vs_pooled_", names(wide_r), value = TRUE)
 
-wide_r[, closest_to_pooled := {
-  x <- unlist(.SD)
-  nm <- names(x)
-  keep <- !is.na(x)
-  if (!any(keep)) NA_character_
-  else {
-    best <- nm[keep][which.min(abs(x[keep]))]
-    gsub("^dNES_vs_pooled_|[0-9]+$", "", best)
-  }
-}, .SDcols = delta_cols]
+if (length(delta_cols) > 0) {
+  wide_r[, closest_to_pooled := {
+    x <- unlist(.SD)
+    nm <- names(x)
+    keep <- !is.na(x)
+    if (!any(keep)) NA_character_
+    else {
+      best <- nm[keep][which.min(abs(x[keep]))]
+      sub("_dNES_vs_pooled$", "", best)
+    }
+  }, .SDcols = delta_cols]
 
-wide_r[, most_divergent_from_pooled := {
-  x <- unlist(.SD)
-  nm <- names(x)
-  keep <- !is.na(x)
-  if (!any(keep)) NA_character_
-  else {
-    worst <- nm[keep][which.max(abs(x[keep]))]
-    gsub("^dNES_vs_pooled_|[0-9]+$", "", worst)
-  }
-}, .SDcols = delta_cols]
+  wide_r[, most_divergent_from_pooled := {
+    x <- unlist(.SD)
+    nm <- names(x)
+    keep <- !is.na(x)
+    if (!any(keep)) NA_character_
+    else {
+      worst <- nm[keep][which.max(abs(x[keep]))]
+      sub("_dNES_vs_pooled$", "", worst)
+    }
+  }, .SDcols = delta_cols]
+}
 
-setcolorder(
-  wide_r,
-  c("pathway",
-    keep_nes,
-    keep_padj,
-    keep_dir,
-    delta_cols,
-    "NES_range",
-    "closest_to_pooled",
-    "most_divergent_from_pooled")
+col_order_r <- c(
+  "pathway",
+  keep_nes,
+  keep_padj,
+  keep_dir,
+  delta_cols,
+  "NES_range",
+  "closest_to_pooled",
+  "most_divergent_from_pooled"
 )
+
+col_order_r <- col_order_r[col_order_r %in% names(wide_r)]
+
+setcolorder(wide_r, col_order_r)
 
 out_wide_r <- file.path(OUT_DIR, "gsea_shared_reactome_all4_same_direction_wide.csv")
 fwrite(wide_r, out_wide_r)
@@ -370,10 +378,14 @@ message("Wrote: ", basename(out_wide_r))
 # Ranked summary: Top 20 Reactome by NES_range
 # ----------------------------
 if (!("NES_range" %in% names(wide_r))) {
-  stop("Expected NES_range column in wide_r but did not find it.")
+  message("NES_range not present in wide_r; writing fallback top20 without NES_range ordering.")
 }
 
-top20_reactome <- wide_r[order(-NES_range)][1:min(20, .N)]
+top20_reactome <- if ("NES_range" %in% names(wide_r)) {
+  wide_r[order(-NES_range)][1:min(20, .N)]
+} else {
+  wide_r[1:min(20, .N)]
+}
 
 out_top20_r <- file.path(OUT_DIR, "gsea_top20_reactome_by_NES_range.csv")
 fwrite(top20_reactome, out_top20_r)
