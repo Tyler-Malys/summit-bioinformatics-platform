@@ -1,0 +1,26 @@
+===== Matrix =====
+TRUE 
+===== SingleCellExperiment =====
+TRUE 
+===== ggplot2 =====
+TRUE 
+===== dplyr =====
+FALSE 
+===== DropletUtils =====
+FALSE 
+===== scDblFinder =====
+TRUE 
+===== scuttle =====
+TRUE 
+===== scran =====
+TRUE 
+===== BiocSingular =====
+TRUE 
+===== igraph =====
+TRUE 
+===== uwot =====
+TRUE 
+===== Rtsne =====
+TRUE 
+===== mclust =====
+FALSE 
