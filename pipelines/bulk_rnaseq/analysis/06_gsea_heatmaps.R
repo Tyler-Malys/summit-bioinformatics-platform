@@ -5,6 +5,11 @@ suppressPackageStartupMessages({
   library(pheatmap)
 })
 
+source(file.path(Sys.getenv("PIPELINE_ROOT", unset = "."), "analysis", "lib", "reproducibility_utils.R"))
+
+pipeline_seed <- initialize_pipeline_seed()
+cat("PIPELINE_SEED:", pipeline_seed, "\n")
+
 args <- commandArgs(trailingOnly = TRUE)
 
 get_flag_value <- function(flag) {
@@ -202,3 +207,5 @@ plot_heatmap(
 message("Wrote: reactome_shared_heatmap.pdf/png")
 
 message("Done.")
+
+write_stage_session_info("06_gsea_heatmaps")

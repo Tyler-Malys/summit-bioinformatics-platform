@@ -1,0 +1,11 @@
+
+# conda environments:
+#
+# * -> active
+# + -> frozen
+base                 *   /home/summitadmin/miniconda3
+bulk_qc_tools            /home/summitadmin/miniconda3/envs/bulk_qc_tools
+multiqc_env              /home/summitadmin/miniconda3/envs/multiqc_env
+scrna_dbl                /home/summitadmin/miniconda3/envs/scrna_dbl
+                         /mnt/c/bioinformatics/tools/multiqc_env
+

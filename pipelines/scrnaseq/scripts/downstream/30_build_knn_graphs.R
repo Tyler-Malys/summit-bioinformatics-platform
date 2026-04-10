@@ -6,6 +6,29 @@ suppressPackageStartupMessages({
   library(igraph)
 })
 
+# Reproducibility
+pipeline_root_env <- Sys.getenv("PIPELINE_ROOT", unset = "")
+
+pipeline_root <- if (
+  nzchar(pipeline_root_env) &&
+  file.exists(file.path(pipeline_root_env, "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  pipeline_root_env
+} else if (
+  file.exists(file.path(getwd(), "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  normalizePath(getwd(), winslash = "/", mustWork = TRUE)
+} else {
+  stop(
+    "Could not resolve pipeline root for reproducibility helper. ",
+    "Checked PIPELINE_ROOT and current working directory."
+  )
+}
+
+source(file.path(pipeline_root, "scripts", "utils", "reproducibility_helpers.R"))
+PIPELINE_SEED <- initialize_pipeline_seed()
+write_stage_session_info("30_build_knn_graphs")
+
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) < 2) {
@@ -88,11 +111,11 @@ pca_use <- pca_mat[, seq_len(n_pcs), drop = FALSE]
 pca_reg_use <- pca_reg_mat[, seq_len(n_pcs), drop = FALSE]
 
 message("[3/6] Building KNN graph from PCA...")
-set.seed(123)
+message(sprintf("Using PIPELINE_SEED: %d", PIPELINE_SEED))
 g_pca <- buildKNNGraph(t(pca_use), k = k)
 
 message("[4/6] Building KNN graph from PCA_regressed...")
-set.seed(123)
+message(sprintf("Using PIPELINE_SEED: %d", PIPELINE_SEED))
 g_pca_reg <- buildKNNGraph(t(pca_reg_use), k = k)
 
 message("[5/6] Storing graphs and graph metadata...")

@@ -8,6 +8,11 @@ suppressPackageStartupMessages({
   library(org.Hs.eg.db)
 })
 
+source(file.path(Sys.getenv("PIPELINE_ROOT", unset = "."), "analysis", "lib", "reproducibility_utils.R"))
+
+pipeline_seed <- initialize_pipeline_seed()
+cat("PIPELINE_SEED:", pipeline_seed, "\n")
+
 # ----------------------------
 # Parameters (CLI overrides; required roots/inputs must be provided)
 # ----------------------------
@@ -171,6 +176,7 @@ if (overlap_n < 1000) {
 }
 
 message("Running fgsea (multilevel)...")
+set.seed(pipeline_seed)
 fg <- fgsea::fgseaMultilevel(
   pathways = pathways,
   stats    = ranks,
@@ -217,3 +223,5 @@ if (nrow(topn) > 0) {
 }
 
 message("Done.")
+
+write_stage_session_info("04_gsea_fgsea")

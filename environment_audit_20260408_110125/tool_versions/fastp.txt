@@ -1,0 +1,5 @@
+===== fastp =====
+/usr/bin/fastp
+/usr/bin/fastp
+fastp 0.20.1
+

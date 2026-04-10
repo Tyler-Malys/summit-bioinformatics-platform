@@ -4,6 +4,29 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
+# Reproducibility
+pipeline_root_env <- Sys.getenv("PIPELINE_ROOT", unset = "")
+
+pipeline_root <- if (
+  nzchar(pipeline_root_env) &&
+  file.exists(file.path(pipeline_root_env, "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  pipeline_root_env
+} else if (
+  file.exists(file.path(getwd(), "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  normalizePath(getwd(), winslash = "/", mustWork = TRUE)
+} else {
+  stop(
+    "Could not resolve pipeline root for reproducibility helper. ",
+    "Checked PIPELINE_ROOT and current working directory."
+  )
+}
+
+source(file.path(pipeline_root, "scripts", "utils", "reproducibility_helpers.R"))
+PIPELINE_SEED <- initialize_pipeline_seed()
+write_stage_session_info("24_assess_any_reduceddim_covariates")
+
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) < 3) {

@@ -4,6 +4,11 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
+source(file.path(Sys.getenv("PIPELINE_ROOT", unset = "."), "analysis", "lib", "reproducibility_utils.R"))
+
+pipeline_seed <- initialize_pipeline_seed()
+cat("PIPELINE_SEED:", pipeline_seed, "\n")
+
 args <- commandArgs(trailingOnly = TRUE)
 
 get_flag_value <- function(flag) {
@@ -426,3 +431,5 @@ message("Wrote: gsea_reactome_NES_matrix.csv")
 message("Wrote: gsea_hallmark_NES_matrix.csv")
 
 message("Done.")
+
+write_stage_session_info("05_gsea_summary_tables")

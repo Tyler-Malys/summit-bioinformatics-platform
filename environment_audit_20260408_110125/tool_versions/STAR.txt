@@ -1,0 +1,5 @@
+===== STAR =====
+/usr/bin/STAR
+/usr/bin/STAR
+2.7.10a
+

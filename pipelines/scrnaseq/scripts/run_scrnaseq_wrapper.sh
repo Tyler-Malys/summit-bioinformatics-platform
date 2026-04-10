@@ -190,7 +190,10 @@ RERUN_FAILED_ONLY="${RERUN_FAILED_ONLY:-false}"
 MIN_FREE_DISK_GB="${MIN_FREE_DISK_GB:-10}"
 MIN_FREE_MEM_GB="${MIN_FREE_MEM_GB:-4}"
 MIN_AVAILABLE_CPUS="${MIN_AVAILABLE_CPUS:-2}"
-
+# ========================================
+# Reproducibility / Execution Consistency
+# ========================================
+PIPELINE_SEED="${PIPELINE_SEED:-12345}"
 ########################################
 # validate config
 ########################################
@@ -252,6 +255,8 @@ OUTPUTS_DIR="${RUN_DIR}/outputs"
 DOWNSTREAM_DIR="${RUN_DIR}/downstream"
 FINAL_DIR="${RUN_DIR}/final"
 RUN_METADATA_DIR="${RUN_DIR}/run_metadata"
+ENV_METADATA_DIR="${RUN_METADATA_DIR}/environment"
+R_SESSIONS_DIR="${RUN_METADATA_DIR}/r_sessions"
 
 mkdir -p \
   "$INPUT_DIR" \
@@ -261,7 +266,9 @@ mkdir -p \
   "$OUTPUTS_DIR" \
   "$DOWNSTREAM_DIR" \
   "$FINAL_DIR" \
-  "$RUN_METADATA_DIR"
+  "$RUN_METADATA_DIR" \
+  "$ENV_METADATA_DIR" \
+  "$R_SESSIONS_DIR"
 
 WRAP_LOG="${LOGS_DIR}/${WRAPPER_LOG_NAME}"
 START_TIME="$(date '+%F %T')"
@@ -339,6 +346,34 @@ validate_resources() {
     log ERROR "Insufficient CPU availability: available_cpus=$cpu_count required_cpus=$MIN_AVAILABLE_CPUS"
     exit 6
   fi
+}
+
+record_environment_snapshots() {
+  log INFO "Recording environment snapshots"
+
+  if command -v conda >/dev/null 2>&1; then
+    conda env export > "${ENV_METADATA_DIR}/conda_env.yml" 2>/dev/null || true
+    conda list > "${ENV_METADATA_DIR}/conda_list.txt" 2>/dev/null || true
+    conda list --explicit > "${ENV_METADATA_DIR}/conda_explicit.txt" 2>/dev/null || true
+  else
+    log WARN "conda not found in PATH; skipping conda environment exports"
+  fi
+
+  env | sort > "${ENV_METADATA_DIR}/environment_variables.txt"
+
+  {
+    echo "date=$(date '+%F %T')"
+    echo "pipeline_seed=${PIPELINE_SEED}"
+    echo -n "bash="; bash --version | head -n 1
+    echo -n "R="; R --version 2>/dev/null | head -n 1 || true
+    echo -n "Rscript="; Rscript --version 2>&1 | head -n 1 || true
+    echo -n "STAR="; STAR --version 2>&1 | head -n 1 || true
+    if [[ -n "${CELLRANGER_BIN:-}" ]]; then
+      echo -n "cellranger="; "$CELLRANGER_BIN" --version 2>&1 | head -n 1 || true
+    else
+      echo "cellranger=NA"
+    fi
+  } > "${ENV_METADATA_DIR}/tool_versions.txt"
 }
 
 stage_in_range() {
@@ -492,11 +527,20 @@ cp -f "$MANIFEST_FILE" "${INPUT_DIR}/$(basename "$MANIFEST_FILE")"
     echo "cellranger=NA"
   fi
 } > "${RUN_METADATA_DIR}/software_versions.txt"
+  echo "${PIPELINE_SEED}" > "${RUN_METADATA_DIR}/pipeline_seed.txt"
 
+  record_environment_snapshots
 {
   echo "start_time=${START_TIME}"
   echo "status=started"
 } > "$START_END_STATUS_FILE"
+
+export PIPELINE_ROOT
+export RUN_DIR
+export RUN_METADATA_DIR
+export ENV_METADATA_DIR
+export R_SESSIONS_DIR
+export PIPELINE_SEED
 
 ########################################
 # banner

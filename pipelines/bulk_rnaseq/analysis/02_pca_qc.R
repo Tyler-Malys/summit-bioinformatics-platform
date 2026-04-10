@@ -6,6 +6,11 @@ suppressPackageStartupMessages({
   library(SummarizedExperiment)
 })
 
+source(file.path(Sys.getenv("PIPELINE_ROOT", unset = "."), "analysis", "lib", "reproducibility_utils.R"))
+
+pipeline_seed <- initialize_pipeline_seed()
+cat("PIPELINE_SEED:", pipeline_seed, "\n")
+
 args <- commandArgs(trailingOnly = TRUE)
 
 get_flag_value <- function(flag) {
@@ -64,3 +69,5 @@ write.csv(pdat, file.path(out_dir, "pca_scores_crc_vs_hep.csv"), row.names = FAL
 
 cat("Saved PCA plot:", file.path(out_dir, "pca_crc_vs_hep.png"), "\n")
 cat("Saved PCA scores:", file.path(out_dir, "pca_scores_crc_vs_hep.csv"), "\n")
+
+write_stage_session_info("02_pca_qc")

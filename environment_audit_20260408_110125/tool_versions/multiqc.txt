@@ -1,0 +1,139 @@
+===== multiqc =====
+/usr/bin/multiqc
+/usr/bin/multiqc
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 2.2.6
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+Traceback (most recent call last):
+  File "/usr/bin/multiqc", line 33, in <module>
+    sys.exit(load_entry_point('multiqc==1.12', 'console_scripts', 'multiqc')())
+  File "/usr/bin/multiqc", line 25, in importlib_load_entry_point
+    return next(matches).load()
+  File "/usr/lib/python3.10/importlib/metadata/__init__.py", line 171, in load
+    module = import_module(match.group('module'))
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 992, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/usr/lib/python3/dist-packages/multiqc/__init__.py", line 16, in <module>
+    from .multiqc import run
+  File "/usr/lib/python3/dist-packages/multiqc/multiqc.py", line 42, in <module>
+    from .plots import table
+  File "/usr/lib/python3/dist-packages/multiqc/plots/table.py", line 9, in <module>
+    from multiqc.utils import config, report, util_functions, mqc_colour
+  File "/usr/lib/python3/dist-packages/multiqc/utils/mqc_colour.py", line 7, in <module>
+    import spectra
+  File "/usr/lib/python3/dist-packages/spectra/__init__.py", line 1, in <module>
+    from .core import COLOR_SPACES, Color, Scale
+  File "/usr/lib/python3/dist-packages/spectra/core.py", line 1, in <module>
+    from colormath import color_objects, color_conversions
+  File "/usr/lib/python3/dist-packages/colormath/color_conversions.py", line 13, in <module>
+    import networkx
+  File "/usr/lib/python3/dist-packages/networkx/__init__.py", line 112, in <module>
+    import networkx.generators
+  File "/usr/lib/python3/dist-packages/networkx/generators/__init__.py", line 8, in <module>
+    from networkx.generators.community import *
+  File "/usr/lib/python3/dist-packages/networkx/generators/community.py", line 20, in <module>
+    from scipy.special import zeta as _zeta
+  File "/usr/lib/python3/dist-packages/scipy/special/__init__.py", line 649, in <module>
+    from . import _ufuncs
+  File "_ufuncs.pyx", line 1, in init scipy.special._ufuncs
+ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 2.2.6
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+Traceback (most recent call last):
+  File "/usr/bin/multiqc", line 33, in <module>
+    sys.exit(load_entry_point('multiqc==1.12', 'console_scripts', 'multiqc')())
+  File "/usr/bin/multiqc", line 25, in importlib_load_entry_point
+    return next(matches).load()
+  File "/usr/lib/python3.10/importlib/metadata/__init__.py", line 171, in load
+    module = import_module(match.group('module'))
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 992, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/usr/lib/python3/dist-packages/multiqc/__init__.py", line 16, in <module>
+    from .multiqc import run
+  File "/usr/lib/python3/dist-packages/multiqc/multiqc.py", line 42, in <module>
+    from .plots import table
+  File "/usr/lib/python3/dist-packages/multiqc/plots/table.py", line 9, in <module>
+    from multiqc.utils import config, report, util_functions, mqc_colour
+  File "/usr/lib/python3/dist-packages/multiqc/utils/mqc_colour.py", line 7, in <module>
+    import spectra
+  File "/usr/lib/python3/dist-packages/spectra/__init__.py", line 1, in <module>
+    from .core import COLOR_SPACES, Color, Scale
+  File "/usr/lib/python3/dist-packages/spectra/core.py", line 1, in <module>
+    from colormath import color_objects, color_conversions
+  File "/usr/lib/python3/dist-packages/colormath/color_conversions.py", line 13, in <module>
+    import networkx
+  File "/usr/lib/python3/dist-packages/networkx/__init__.py", line 112, in <module>
+    import networkx.generators
+  File "/usr/lib/python3/dist-packages/networkx/generators/__init__.py", line 8, in <module>
+    from networkx.generators.community import *
+  File "/usr/lib/python3/dist-packages/networkx/generators/community.py", line 20, in <module>
+    from scipy.special import zeta as _zeta
+  File "/usr/lib/python3/dist-packages/scipy/special/__init__.py", line 649, in <module>
+    from . import _ufuncs
+  File "_ufuncs.pyx", line 1, in init scipy.special._ufuncs
+ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+/usr/lib/python3/dist-packages/scipy/__init__.py:146: UserWarning: A NumPy version >=1.17.3 and <1.25.0 is required for this version of SciPy (detected version 2.2.6
+  warnings.warn(f"A NumPy version >={np_minversion} and <{np_maxversion}"
+Traceback (most recent call last):
+  File "/usr/bin/multiqc", line 33, in <module>
+    sys.exit(load_entry_point('multiqc==1.12', 'console_scripts', 'multiqc')())
+  File "/usr/bin/multiqc", line 25, in importlib_load_entry_point
+    return next(matches).load()
+  File "/usr/lib/python3.10/importlib/metadata/__init__.py", line 171, in load
+    module = import_module(match.group('module'))
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 992, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/usr/lib/python3/dist-packages/multiqc/__init__.py", line 16, in <module>
+    from .multiqc import run
+  File "/usr/lib/python3/dist-packages/multiqc/multiqc.py", line 42, in <module>
+    from .plots import table
+  File "/usr/lib/python3/dist-packages/multiqc/plots/table.py", line 9, in <module>
+    from multiqc.utils import config, report, util_functions, mqc_colour
+  File "/usr/lib/python3/dist-packages/multiqc/utils/mqc_colour.py", line 7, in <module>
+    import spectra
+  File "/usr/lib/python3/dist-packages/spectra/__init__.py", line 1, in <module>
+    from .core import COLOR_SPACES, Color, Scale
+  File "/usr/lib/python3/dist-packages/spectra/core.py", line 1, in <module>
+    from colormath import color_objects, color_conversions
+  File "/usr/lib/python3/dist-packages/colormath/color_conversions.py", line 13, in <module>
+    import networkx
+  File "/usr/lib/python3/dist-packages/networkx/__init__.py", line 112, in <module>
+    import networkx.generators
+  File "/usr/lib/python3/dist-packages/networkx/generators/__init__.py", line 8, in <module>
+    from networkx.generators.community import *
+  File "/usr/lib/python3/dist-packages/networkx/generators/community.py", line 20, in <module>
+    from scipy.special import zeta as _zeta
+  File "/usr/lib/python3/dist-packages/scipy/special/__init__.py", line 649, in <module>
+    from . import _ufuncs
+  File "_ufuncs.pyx", line 1, in init scipy.special._ufuncs
+ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+

@@ -4,6 +4,11 @@ suppressPackageStartupMessages({
   library(DESeq2)
 })
 
+source(file.path(Sys.getenv("PIPELINE_ROOT", unset = "."), "analysis", "lib", "reproducibility_utils.R"))
+
+pipeline_seed <- initialize_pipeline_seed()
+cat("PIPELINE_SEED:", pipeline_seed, "\n")
+
 args <- commandArgs(trailingOnly = TRUE)
 
 get_flag_value <- function(flag) {
@@ -154,3 +159,5 @@ write.csv(summary_df, out_sum, row.names = FALSE, quote = TRUE)
 cat("\nWrote summary:", out_sum, "\n")
 
 cat("\nDone.\n")
+
+write_stage_session_info("03_differential_expression")

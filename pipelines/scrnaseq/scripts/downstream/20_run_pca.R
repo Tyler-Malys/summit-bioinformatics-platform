@@ -5,6 +5,29 @@ suppressPackageStartupMessages({
   library(BiocSingular)
 })
 
+# Reproducibility
+pipeline_root_env <- Sys.getenv("PIPELINE_ROOT", unset = "")
+
+pipeline_root <- if (
+  nzchar(pipeline_root_env) &&
+  file.exists(file.path(pipeline_root_env, "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  pipeline_root_env
+} else if (
+  file.exists(file.path(getwd(), "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  normalizePath(getwd(), winslash = "/", mustWork = TRUE)
+} else {
+  stop(
+    "Could not resolve pipeline root for reproducibility helper. ",
+    "Checked PIPELINE_ROOT and current working directory."
+  )
+}
+
+source(file.path(pipeline_root, "scripts", "utils", "reproducibility_helpers.R"))
+PIPELINE_SEED <- initialize_pipeline_seed()
+write_stage_session_info("20_run_pca")
+
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) < 2) {
@@ -78,7 +101,7 @@ message("[3/6] Subsetting to HVGs...")
 mat_hvg <- mat[hvg_idx, , drop = FALSE]
 
 message("[4/6] Running PCA with centering and scaling...")
-set.seed(123)
+message(sprintf("Using PIPELINE_SEED: %d", PIPELINE_SEED))
 pca_out <- runPCA(
   t(mat_hvg),
   rank = n_pcs,

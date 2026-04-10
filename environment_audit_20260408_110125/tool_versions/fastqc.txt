@@ -1,0 +1,5 @@
+===== fastqc =====
+/usr/bin/fastqc
+/usr/bin/fastqc
+FastQC v0.11.9
+

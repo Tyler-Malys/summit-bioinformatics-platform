@@ -8,6 +8,28 @@ suppressPackageStartupMessages({
   library(readr)
 })
 
+args_full <- commandArgs(trailingOnly = FALSE)
+file_arg <- "--file="
+script_path <- sub(file_arg, "", args_full[grep(file_arg, args_full)])
+
+if (length(script_path) == 0) {
+  stop("Unable to resolve script path from commandArgs().")
+}
+
+script_path <- normalizePath(script_path[1])
+script_dir <- dirname(script_path)
+pipeline_root <- normalizePath(file.path(script_dir, "..", ".."))
+
+repro_helpers <- file.path(pipeline_root, "scripts", "utils", "reproducibility_helpers.R")
+if (!file.exists(repro_helpers)) {
+  stop("Could not find reproducibility helpers: ", repro_helpers)
+}
+
+source(repro_helpers)
+
+initialize_pipeline_seed()
+write_stage_session_info("50_export_visualizations")
+
 dir.create("analysis/figures/downstream", recursive = TRUE, showWarnings = FALSE)
 dir.create("analysis/figures/downstream/cellranger", recursive = TRUE, showWarnings = FALSE)
 dir.create("analysis/figures/downstream/starsolo", recursive = TRUE, showWarnings = FALSE)

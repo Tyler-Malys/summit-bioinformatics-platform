@@ -1,0 +1,183 @@
+#!/usr/bin/env Rscript
+
+suppressPackageStartupMessages({
+  library(DESeq2)
+})
+
+args <- commandArgs(trailingOnly = TRUE)
+
+get_flag_value <- function(flag) {
+  idx <- match(flag, args)
+  if (is.na(idx)) return(NULL)
+  if (idx == length(args)) stop(paste0("ERROR: missing value after ", flag), call. = FALSE)
+  args[[idx + 1]]
+}
+
+print_usage <- function() {
+  cat("Usage:\n")
+  cat("  Rscript analysis/01_build_analysis_object.R \\\n")
+  cat("    --counts-path <gene_counts.csv> \\\n")
+  cat("    --out-dds <dds.rds> \\\n")
+  cat("    --out-vsd <vsd.rds>\n")
+}
+
+if ("-h" %in% args || "--help" %in% args) {
+  print_usage()
+  quit(status = 0, save = "no")
+}
+
+cat("---- Building Analysis-Ready DESeq2 Object ----\n")
+
+# ===============================
+# 1. Define Paths
+# ===============================
+
+counts_path <- get_flag_value("--counts-path")
+out_dds     <- get_flag_value("--out-dds")
+out_vsd     <- get_flag_value("--out-vsd")
+
+if (is.null(counts_path) || is.null(out_dds) || is.null(out_vsd)) {
+  cat("ERROR: required args missing.\n\n")
+  print_usage()
+  quit(status = 2, save = "no")
+}
+
+if (!file.exists(counts_path)) {
+  stop(paste0("ERROR: counts file not found: ", counts_path), call. = FALSE)
+}
+
+# ===============================
+# 2. Load Gene Counts
+# ===============================
+
+cat("Loading counts from:", counts_path, "\n")
+cat("Output DDS:", out_dds, "\n")
+cat("Output VSD:", out_vsd, "\n")
+
+counts <- read.csv(
+  counts_path,
+  row.names = 1,
+  check.names = FALSE
+)
+
+cat("Initial dimensions (genes x samples):", dim(counts), "\n")
+
+# Remove any empty gene IDs (safety)
+counts <- counts[rownames(counts) != "" & !is.na(rownames(counts)), , drop = FALSE]
+
+# ===============================
+# 3. Build Metadata from Sample Names
+# ===============================
+
+samples <- colnames(counts)
+
+meta <- data.frame(
+  sample_id = samples,
+  stringsAsFactors = FALSE
+)
+
+# Extract cell line (prefix before first underscore)
+meta$cell_line <- sub("_.*", "", meta$sample_id)
+
+# Extract dose (D1/D2/D3/D4/DMSO)
+meta$dose <- sub(".*_(D[0-9]+|DMSO)_.*", "\\1", meta$sample_id)
+
+# Extract replicate number (last numeric token)
+meta$replicate <- sub(".*_([0-9]+)$", "\\1", meta$sample_id)
+
+meta$cell_line <- factor(meta$cell_line)
+meta$dose      <- factor(meta$dose)
+
+cat("Cell line breakdown (before filtering):\n")
+print(table(meta$cell_line))
+
+# ===============================
+# 4. Keep Approved Cell Lines
+#    (Exclude THLE_2)
+# ===============================
+
+keep <- meta$cell_line %in% c("Hep", "SW48", "SW480", "SW1116")
+
+counts <- counts[, keep, drop = FALSE]
+meta   <- meta[keep, , drop = FALSE]
+
+# Reorder metadata to match counts
+meta <- meta[match(colnames(counts), meta$sample_id), ]
+
+stopifnot(all(meta$sample_id == colnames(counts)))
+
+cat("Cell line breakdown (after filtering):\n")
+print(table(meta$cell_line))
+
+cat("Dimensions after sample filtering:", dim(counts), "\n")
+
+# ===============================
+# 5. Gene Filtering
+#    Keep genes with >=10 counts
+#    in at least 2 samples
+# ===============================
+
+genes_before <- nrow(counts)
+
+keep_genes <- rowSums(counts >= 10) >= 2
+counts_f   <- counts[keep_genes, , drop = FALSE]
+
+# Convert to matrix, then round to integers for DESeq2
+counts_f <- as.matrix(counts_f)
+counts_f <- round(counts_f)
+storage.mode(counts_f) <- "integer"
+
+genes_after <- nrow(counts_f)
+
+cat("Genes before filtering:", genes_before, "\n")
+cat("Genes after filtering:", genes_after, "\n")
+cat("Genes removed:", genes_before - genes_after, "\n")
+
+# ===============================
+# 6. Create DESeq2 Object
+# ===============================
+
+dds <- DESeqDataSetFromMatrix(
+  countData = counts_f,
+  colData   = meta,
+  design    = ~ cell_line
+)
+
+# Set hepatocytes as reference
+dds$cell_line <- relevel(dds$cell_line, ref = "Hep")
+
+cat("Design formula:", deparse(design(dds)), "\n")
+
+# ===============================
+# 7. Run DESeq (Normalization + Model)
+# ===============================
+
+cat("Running DESeq...\n")
+
+dds <- DESeq(dds)
+
+cat("DESeq complete.\n")
+
+# ===============================
+# 8. Variance Stabilizing Transform
+# ===============================
+
+cat("Performing VST transformation...\n")
+
+vsd <- DESeq2::vst(dds, blind = FALSE)
+
+cat("VST complete.\n")
+
+# ===============================
+# 9. Save Objects
+# ===============================
+dir.create(dirname(out_dds), showWarnings = FALSE, recursive = TRUE)
+dir.create(dirname(out_vsd), showWarnings = FALSE, recursive = TRUE)
+
+saveRDS(dds, out_dds)
+saveRDS(vsd, out_vsd)
+
+cat("Saved DESeq2 object to:", out_dds, "\n")
+cat("Saved VST object to:", out_vsd, "\n")
+
+cat("---- Analysis Object Build Complete ----\n")

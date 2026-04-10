@@ -1,0 +1,5 @@
+===== python =====
+/home/summitadmin/miniconda3/bin/python
+/home/summitadmin/miniconda3/bin/python
+Python 3.13.12
+

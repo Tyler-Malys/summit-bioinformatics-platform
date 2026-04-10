@@ -5,6 +5,29 @@ suppressPackageStartupMessages({
   library(BiocSingular)
 })
 
+# Reproducibility
+pipeline_root_env <- Sys.getenv("PIPELINE_ROOT", unset = "")
+
+pipeline_root <- if (
+  nzchar(pipeline_root_env) &&
+  file.exists(file.path(pipeline_root_env, "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  pipeline_root_env
+} else if (
+  file.exists(file.path(getwd(), "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  normalizePath(getwd(), winslash = "/", mustWork = TRUE)
+} else {
+  stop(
+    "Could not resolve pipeline root for reproducibility helper. ",
+    "Checked PIPELINE_ROOT and current working directory."
+  )
+}
+
+source(file.path(pipeline_root, "scripts", "utils", "reproducibility_helpers.R"))
+PIPELINE_SEED <- initialize_pipeline_seed()
+write_stage_session_info("22_regress_covariates_and_rerun_pca")
+
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) < 2) {
@@ -119,7 +142,7 @@ if (n_pcs < 2) {
   stop("After bounds checking, fewer than 2 PCs can be computed.")
 }
 
-set.seed(123)
+message(sprintf("Using PIPELINE_SEED: %d", PIPELINE_SEED))
 pca_out <- runPCA(
   t(resid_hvg),
   rank = n_pcs,

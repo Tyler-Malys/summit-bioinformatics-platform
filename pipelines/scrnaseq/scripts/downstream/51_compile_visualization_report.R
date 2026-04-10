@@ -1,5 +1,27 @@
 #!/usr/bin/env Rscript
 
+args_full <- commandArgs(trailingOnly = FALSE)
+file_arg <- "--file="
+script_path <- sub(file_arg, "", args_full[grep(file_arg, args_full)])
+
+if (length(script_path) == 0) {
+  stop("Unable to resolve script path from commandArgs().")
+}
+
+script_path <- normalizePath(script_path[1])
+script_dir <- dirname(script_path)
+pipeline_root <- normalizePath(file.path(script_dir, "..", ".."))
+
+repro_helpers <- file.path(pipeline_root, "scripts", "utils", "reproducibility_helpers.R")
+if (!file.exists(repro_helpers)) {
+  stop("Could not find reproducibility helpers: ", repro_helpers)
+}
+
+source(repro_helpers)
+
+initialize_pipeline_seed()
+write_stage_session_info("51_compile_visualization_report")
+
 dirs <- c(
   "analysis/figures/qc/cellranger",
   "analysis/figures/qc/starsolo",

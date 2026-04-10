@@ -77,6 +77,8 @@ echo "HOST=$(hostname)"
 echo "PWD=$(pwd)"
 echo
 
+STAR_BIN="${STAR_BIN:-$(command -v STAR || true)}"
+
 ########################################
 # Input validation
 ########################################
@@ -121,8 +123,10 @@ fi
 ########################################
 
 echo "Checking required tools..."
-command -v STAR >/dev/null 2>&1 || { echo "ERROR: STAR not found in PATH" >&2; exit 4; }
-echo "STAR_VERSION=$(STAR --version 2>/dev/null || echo unknown)"
+[[ -n "${STAR_BIN:-}" ]] || { echo "ERROR: STAR_BIN is empty and STAR not found in PATH" >&2; exit 4; }
+[[ -x "$STAR_BIN" ]] || { echo "ERROR: STAR_BIN not executable: $STAR_BIN" >&2; exit 4; }
+echo "STAR_BIN=$STAR_BIN"
+echo "STAR_VERSION=$("$STAR_BIN" --version 2>/dev/null || echo unknown)"
 echo
 
 ########################################
@@ -186,7 +190,7 @@ for R1 in "${R1S_SORTED[@]}"; do
   echo "--- STAR align: $sample ---"
   date
 
-  if ! STAR \
+  if ! "$STAR_BIN" \
       --runThreadN "$THREADS" \
       --genomeDir "$REF_INDEX" \
       --readFilesIn "$R1" "$R2" \
@@ -231,7 +235,8 @@ done
   echo "Input directory: $INPUT_DIR"
   echo "Threads: $THREADS"
   echo "STAR index: $REF_INDEX"
-  echo "STAR version: $(STAR --version 2>/dev/null || echo unknown)"
+  echo "STAR bin: $STAR_BIN"
+  echo "STAR version: $("$STAR_BIN" --version 2>/dev/null || echo unknown)"  
   echo "Samples detected: ${#R1S[@]}"
   echo "Processed: $PROCESSED"
   echo "Skipped: $SKIPPED"

@@ -1,0 +1,5 @@
+"contrast","n_tested","n_sig_padj_0.05","n_sig_padj_0.05_lfc1"
+"SW48_vs_Hep",23753,18820,13191
+"SW480_vs_Hep",23753,18040,12115
+"SW1116_vs_Hep",23753,17973,12235
+"PooledCRC_vs_Hep",23753,16862,11633

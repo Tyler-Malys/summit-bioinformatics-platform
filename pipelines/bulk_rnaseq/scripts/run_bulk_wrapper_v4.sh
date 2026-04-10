@@ -45,11 +45,19 @@ default_var RUNS_ROOT "${PIPELINE_ROOT}/runs"
 default_var RAW_LOCAL_ROOT "${PIPELINE_ROOT}/data/raw_local"
 default_var FASTQC_BIN "/home/summitadmin/miniconda3/envs/bulk_qc_tools/bin/fastqc"
 default_var MULTIQC_BIN "/home/summitadmin/miniconda3/envs/bulk_qc_tools/bin/multiqc"
+default_var FASTP_BIN "/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/fastp"
+default_var SALMON_BIN "/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/salmon"
+default_var STAR_BIN "/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/STAR"
+default_var RSCRIPT_BIN "/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/Rscript"
 QC_SCRIPT="${PIPELINE_ROOT}/scripts/qc_fastq.sh"
 TRIM_SCRIPT="${PIPELINE_ROOT}/scripts/trim_fastp.sh"
 SALMON_SCRIPT="${PIPELINE_ROOT}/scripts/salmon_quant.sh"
 TXIMPORT_SCRIPT="${PIPELINE_ROOT}/scripts/tximport_genelevel.R"
 STAR_SCRIPT="${PIPELINE_ROOT}/scripts/star_align.sh"
+export FASTP_BIN
+export SALMON_BIN
+export STAR_BIN
+export RSCRIPT_BIN
 
 default_var RUN_ID ""
 if [[ -z "$RUN_ID" ]]; then
@@ -93,6 +101,7 @@ default_var RERUN_FAILED_ONLY "false"
 default_var MIN_FREE_DISK_GB "10"
 default_var MIN_FREE_MEM_GB "4"
 default_var MIN_AVAILABLE_CPUS "2"
+default_var PIPELINE_SEED "12345"
 
 # ========================================
 # Reference auto-resolution (config-driven)
@@ -231,18 +240,146 @@ cp -f "$CONFIG" "${RUN_METADATA_DIR}/resolved_config.env"
 {
   echo "date=$(date '+%F %T')"
   echo -n "bash="; bash --version | head -n 1
-  echo -n "Rscript="; Rscript --version 2>&1 | head -n 1 || true
-  echo -n "salmon="; salmon --version 2>&1 | head -n 1 || true
-  echo -n "STAR="; STAR --version 2>&1 | head -n 1 || true
-  echo -n "fastp="; fastp --version 2>&1 | head -n 1 || true
-  echo -n "fastqc="; fastqc --version 2>&1 | head -n 1 || true
-  echo -n "multiqc="; multiqc --version 2>&1 | head -n 1 || true
+
+  echo "Rscript_bin=${RSCRIPT_BIN:-NA}"
+  [[ -n "${RSCRIPT_BIN:-}" && -x "$RSCRIPT_BIN" ]] && \
+    { echo -n "Rscript="; "$RSCRIPT_BIN" --version 2>&1 | head -n 1; } || \
+    echo "Rscript=NA"
+
+  echo "salmon_bin=${SALMON_BIN:-NA}"
+  [[ -n "${SALMON_BIN:-}" && -x "$SALMON_BIN" ]] && \
+    { echo -n "salmon="; "$SALMON_BIN" --version 2>&1 | head -n 1; } || \
+    echo "salmon=NA"
+
+  echo "STAR_bin=${STAR_BIN:-NA}"
+  [[ -n "${STAR_BIN:-}" && -x "$STAR_BIN" ]] && \
+    { echo -n "STAR="; "$STAR_BIN" --version 2>&1 | head -n 1; } || \
+    echo "STAR=NA"
+
+  echo "fastp_bin=${FASTP_BIN:-NA}"
+  [[ -n "${FASTP_BIN:-}" && -x "$FASTP_BIN" ]] && \
+    { echo -n "fastp="; "$FASTP_BIN" --version 2>&1 | head -n 1; } || \
+    echo "fastp=NA"
+
+  echo "fastqc_bin=${FASTQC_BIN:-NA}"
+  [[ -n "${FASTQC_BIN:-}" && -x "$FASTQC_BIN" ]] && \
+    { echo -n "fastqc="; "$FASTQC_BIN" --version 2>&1 | head -n 1; } || \
+    echo "fastqc=NA"
+
+  echo "multiqc_bin=${MULTIQC_BIN:-NA}"
+  [[ -n "${MULTIQC_BIN:-}" && -x "$MULTIQC_BIN" ]] && \
+    { echo -n "multiqc="; "$MULTIQC_BIN" --version 2>&1 | head -n 1; } || \
+    echo "multiqc=NA"
 } > "${RUN_METADATA_DIR}/software_versions.txt"
 
 {
   echo "start_time=${START_TIME}"
   echo "status=started"
 } > "$START_END_STATUS_FILE"
+
+# ========================================
+# Reproducibility & Execution Consistency
+# ========================================
+ENV_METADATA_DIR="${RUN_METADATA_DIR}/environment"
+R_SESSIONS_DIR="${RUN_METADATA_DIR}/r_sessions"
+REPRO_DIR="${RUN_METADATA_DIR}/reproducibility"
+
+mkdir -p \
+  "$ENV_METADATA_DIR" \
+  "$R_SESSIONS_DIR" \
+  "$REPRO_DIR"
+
+# Deterministic seed control
+export PIPELINE_SEED
+echo "pipeline_seed=${PIPELINE_SEED}" > "${RUN_METADATA_DIR}/pipeline_seed.txt"
+
+# Export run-scoped metadata locations for downstream R stages
+export PIPELINE_ROOT
+export RUN_DIR
+export RUN_METADATA_DIR
+export ENV_METADATA_DIR
+export R_SESSIONS_DIR
+export REPRO_DIR
+
+record_environment_snapshots() {
+  echo "[INFO] Recording reproducibility metadata snapshot" | tee -a "$WRAP_LOG"
+  
+  if command -v conda >/dev/null 2>&1; then
+    conda env export > "${ENV_METADATA_DIR}/conda_env_export.yml" 2>/dev/null || \
+      echo "WARNING: conda env export failed" > "${ENV_METADATA_DIR}/conda_env_export.yml"
+
+    conda list --explicit > "${ENV_METADATA_DIR}/conda_explicit.txt" 2>/dev/null || \
+      echo "WARNING: conda list --explicit failed" > "${ENV_METADATA_DIR}/conda_explicit.txt"
+
+    conda list > "${ENV_METADATA_DIR}/conda_list.txt" 2>/dev/null || \
+      echo "WARNING: conda list failed" > "${ENV_METADATA_DIR}/conda_list.txt"
+  else
+    echo "WARNING: conda not found in PATH" > "${ENV_METADATA_DIR}/conda_env_export.yml"
+    echo "WARNING: conda not found in PATH" > "${ENV_METADATA_DIR}/conda_explicit.txt"
+    echo "WARNING: conda not found in PATH" > "${ENV_METADATA_DIR}/conda_list.txt"
+  fi
+
+  {
+    echo "timestamp=$(date '+%F %T')"
+    echo "run_id=${RUN_ID}"
+    echo "pipeline=bulk_rnaseq"
+    echo "pipeline_seed=${PIPELINE_SEED}"
+    echo "config=${CONFIG}"
+    echo "pipeline_root=${PIPELINE_ROOT}"
+    echo
+    env | sort
+  } > "${ENV_METADATA_DIR}/env_vars.txt"
+
+  {
+    echo "timestamp=$(date '+%F %T')"
+    echo "run_id=${RUN_ID}"
+    echo "pipeline_seed=${PIPELINE_SEED}"
+    echo
+    echo "[R]"
+    if [[ -n "${RSCRIPT_BIN:-}" && -x "$RSCRIPT_BIN" ]]; then
+      "$RSCRIPT_BIN" --version 2>&1
+    else
+      echo "Rscript=NA"
+    fi
+    echo
+    echo "[salmon]"
+    if [[ -n "${SALMON_BIN:-}" && -x "$SALMON_BIN" ]]; then
+      "$SALMON_BIN" --version 2>&1
+    else
+      echo "salmon=NA"
+    fi
+    echo
+    echo "[STAR]"
+    if [[ -n "${STAR_BIN:-}" && -x "$STAR_BIN" ]]; then
+      "$STAR_BIN" --version 2>&1
+    else
+      echo "STAR=NA"
+    fi
+    echo
+    echo "[fastp]"
+    if [[ -n "${FASTP_BIN:-}" && -x "$FASTP_BIN" ]]; then
+      "$FASTP_BIN" --version 2>&1
+    else
+      echo "fastp=NA"
+    fi
+    echo
+    echo "[fastqc]"
+    if [[ -n "${FASTQC_BIN:-}" && -x "$FASTQC_BIN" ]]; then
+      "$FASTQC_BIN" --version 2>&1
+    else
+      echo "fastqc=NA"
+    fi
+    echo
+    echo "[multiqc]"
+    if [[ -n "${MULTIQC_BIN:-}" && -x "$MULTIQC_BIN" ]]; then
+      "$MULTIQC_BIN" --version 2>&1
+    else
+      echo "multiqc=NA"
+    fi
+  } > "${ENV_METADATA_DIR}/tool_versions_snapshot.txt"
+}
+
+record_environment_snapshots
 
 # --- helpers / boolean handling / logging ---
 is_true() {

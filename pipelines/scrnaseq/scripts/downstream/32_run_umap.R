@@ -5,6 +5,29 @@ suppressPackageStartupMessages({
   library(uwot)
 })
 
+# Reproducibility
+pipeline_root_env <- Sys.getenv("PIPELINE_ROOT", unset = "")
+
+pipeline_root <- if (
+  nzchar(pipeline_root_env) &&
+  file.exists(file.path(pipeline_root_env, "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  pipeline_root_env
+} else if (
+  file.exists(file.path(getwd(), "scripts", "utils", "reproducibility_helpers.R"))
+) {
+  normalizePath(getwd(), winslash = "/", mustWork = TRUE)
+} else {
+  stop(
+    "Could not resolve pipeline root for reproducibility helper. ",
+    "Checked PIPELINE_ROOT and current working directory."
+  )
+}
+
+source(file.path(pipeline_root, "scripts", "utils", "reproducibility_helpers.R"))
+PIPELINE_SEED <- initialize_pipeline_seed()
+write_stage_session_info("32_run_umap")
+
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) < 2) {
@@ -73,7 +96,7 @@ message("ReducedDims present: ", paste(rd_names, collapse = ", "))
 message("Adjusted PCs used for UMAP: ", n_pcs)
 
 message("[2/6] Running UMAP from PCA...")
-set.seed(123)
+message(sprintf("Using PIPELINE_SEED: %d", PIPELINE_SEED))
 
 pca_use <- reducedDim(sce, "PCA")[, seq_len(n_pcs), drop = FALSE]
 
@@ -89,7 +112,7 @@ reducedDim(sce, "UMAP") <- umap_pca
 
 
 message("[3/6] Running UMAP from PCA_regressed...")
-set.seed(123)
+message(sprintf("Using PIPELINE_SEED: %d", PIPELINE_SEED))
 
 pca_reg_use <- reducedDim(sce, "PCA_regressed")[, seq_len(n_pcs), drop = FALSE]
 
