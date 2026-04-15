@@ -61,7 +61,8 @@ cluster_to_celltype <- c(
   "6" = "monocytes / antigen-presenting myeloid",
   "7" = "T cells",
   "8" = "NK cells",
-  "9" = "myeloid APC-like cells"
+  "9" = "myeloid APC-like cells",
+  "10" = "myeloid APC-like cells"
 )
 
 cluster_to_lineage <- c(
@@ -73,7 +74,8 @@ cluster_to_lineage <- c(
   "6" = "myeloid",
   "7" = "lymphoid",
   "8" = "lymphoid",
-  "9" = "myeloid"
+  "9" = "myeloid",
+  "10" = "myeloid"
 )
 
 cluster_to_confidence <- c(
@@ -85,7 +87,8 @@ cluster_to_confidence <- c(
   "6" = "high",
   "7" = "medium",
   "8" = "high",
-  "9" = "medium"
+  "9" = "medium",
+  "10" = "medium"
 )
 
 cluster_to_notes <- c(
@@ -97,7 +100,8 @@ cluster_to_notes <- c(
   "6" = "FCER1G CST3 HLA-DRA LYZ GRN; antigen-presenting myeloid signature",
   "7" = "LDHB ribosomal-rich lymphoid cluster; likely T-cell subset",
   "8" = "GZMA NKG7 CTSW GNLY KLRD1 HCST TYROBP",
-  "9" = "COTL1 TYROBP AIF1 LST1 SAT1; myeloid APC-like cluster"
+  "9" = "COTL1 TYROBP AIF1 LST1 SAT1; myeloid APC-like cluster",
+  "10" = "AIF1 COTL1 TYROBP LST1 FCGR3A MS4A7 HLA-DPA1; myeloid APC-like cluster"
 )
 
 missing_clusters <- setdiff(sort(unique(clusters)), names(cluster_to_celltype))
