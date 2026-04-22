@@ -1,0 +1,14 @@
+date=2026-04-20 13:17:39
+bash=GNU bash, version 5.1.16(1)-release (x86_64-pc-linux-gnu)
+Rscript_bin=/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/Rscript
+Rscript=Rscript (R) version 4.3.3 (2024-02-29)
+salmon_bin=/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/salmon
+salmon=salmon 1.10.3
+STAR_bin=/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/STAR
+STAR=2.7.11b
+fastp_bin=/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/fastp
+fastp=fastp 1.3.1
+fastqc_bin=/home/summitadmin/miniconda3/envs/bulk_qc_tools/bin/fastqc
+fastqc=FastQC v0.12.1
+multiqc_bin=/home/summitadmin/miniconda3/envs/bulk_qc_tools/bin/multiqc
+multiqc=multiqc, version 1.33

@@ -1,0 +1,10 @@
+run_id=bulk_final_release
+pipeline=bulk_rnaseq
+timestamp=2026-04-20 13:17:39
+operator=summitadmin
+project_root=/home/summitadmin/bioinformatics_projects/pipelines/bulk_rnaseq
+config=/home/summitadmin/bioinformatics_projects/configs/final_bulk.env
+pilot_fastq_dir=/home/summitadmin/bioinformatics_projects/pipelines/bulk_rnaseq/data/validation_crc_subset
+salmon_index=/home/summitadmin/refs/gencode_grch38/salmon_index
+star_index=/home/summitadmin/refs/human/grch38/gencode_v49/star_index
+tx2gene=/home/summitadmin/refs/gencode_grch38/tx2gene.noversion.tsv

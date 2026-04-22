@@ -1,0 +1,40 @@
+stage_name: 20_run_pca
+ timestamp: 2026-04-21 14:36:00
+
+R version 4.3.3 (2024-02-29)
+Platform: x86_64-conda-linux-gnu (64-bit)
+Running under: Ubuntu 22.04.2 LTS
+
+Matrix products: default
+BLAS/LAPACK: /home/summitadmin/miniconda3/envs/scrnaseq_env/lib/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
+
+locale:
+ [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+ [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+ [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+[10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
+
+time zone: America/New_York
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats4    stats     graphics  grDevices utils     datasets  methods  
+[8] base     
+
+other attached packages:
+ [1] BiocSingular_1.18.0         SingleCellExperiment_1.24.0
+ [3] SummarizedExperiment_1.32.0 Biobase_2.62.0             
+ [5] GenomicRanges_1.54.1        GenomeInfoDb_1.38.1        
+ [7] IRanges_2.36.0              S4Vectors_0.40.2           
+ [9] BiocGenerics_0.48.1         MatrixGenerics_1.14.0      
+[11] matrixStats_1.5.0          
+
+loaded via a namespace (and not attached):
+ [1] crayon_1.5.3            rsvd_1.0.5              DelayedArray_0.28.0    
+ [4] RCurl_1.98-1.17         grid_4.3.3              abind_1.4-5            
+ [7] bitops_1.0-9            compiler_4.3.3          codetools_0.2-20       
+[10] irlba_2.3.5.1           Rcpp_1.1.0              XVector_0.42.0         
+[13] BiocParallel_1.36.0     lattice_0.22-7          SparseArray_1.2.2      
+[16] parallel_4.3.3          GenomeInfoDbData_1.2.11 Matrix_1.6-5           
+[19] tools_4.3.3             beachmat_2.18.0         ScaledMatrix_1.10.0    
+[22] zlibbioc_1.48.0         S4Arrays_1.2.0         

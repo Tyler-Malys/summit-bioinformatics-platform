@@ -1,0 +1,110 @@
+timestamp=2026-04-20 13:17:44
+run_id=bulk_final_release
+pipeline=bulk_rnaseq
+pipeline_seed=12345
+config=/home/summitadmin/bioinformatics_projects/configs/final_bulk.env
+pipeline_root=/home/summitadmin/bioinformatics_projects/pipelines/bulk_rnaseq
+
+ADDR2LINE=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-addr2line
+AR=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-ar
+AS=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-as
+BUILD=x86_64-conda-linux-gnu
+CC=x86_64-conda-linux-gnu-cc
+CC_FOR_BUILD=x86_64-conda-linux-gnu-cc
+CFLAGS=-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/summitadmin/miniconda3/include
+CMAKE_ARGS=-DCMAKE_AR=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-ar -DCMAKE_CXX_COMPILER_AR=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gcc-ar -DCMAKE_C_COMPILER_AR=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gcc-ar -DCMAKE_RANLIB=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-ranlib -DCMAKE_CXX_COMPILER_RANLIB=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gcc-ranlib -DCMAKE_C_COMPILER_RANLIB=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gcc-ranlib -DCMAKE_LINKER=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-ld -DCMAKE_STRIP=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-strip -DCMAKE_BUILD_TYPE=Release
+CMAKE_PREFIX_PATH=/home/summitadmin/miniconda3:/home/summitadmin/miniconda3/x86_64-conda-linux-gnu/sysroot/usr
+CONDA_BUILD_CROSS_COMPILATION=
+CONDA_BUILD_SYSROOT=/home/summitadmin/miniconda3/x86_64-conda-linux-gnu/sysroot
+CONDA_DEFAULT_ENV=base
+CONDA_EXE=/home/summitadmin/miniconda3/bin/conda
+CONDA_PREFIX=/home/summitadmin/miniconda3
+CONDA_PROMPT_MODIFIER=(base) 
+CONDA_PYTHON_EXE=/home/summitadmin/miniconda3/bin/python
+CONDA_SHLVL=1
+CONDA_TOOLCHAIN_BUILD=x86_64-conda-linux-gnu
+CONDA_TOOLCHAIN_HOST=x86_64-conda-linux-gnu
+CPP=x86_64-conda-linux-gnu-cpp
+CPPFLAGS=-DNDEBUG -D_FORTIFY_SOURCE=2 -O2 -isystem /home/summitadmin/miniconda3/include
+CPP_FOR_BUILD=x86_64-conda-linux-gnu-cpp
+CXX=x86_64-conda-linux-gnu-c++
+CXXFILT=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-c++filt
+CXXFLAGS=-fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/summitadmin/miniconda3/include
+CXX_FOR_BUILD=x86_64-conda-linux-gnu-c++
+DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+DEBUG_CFLAGS=-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-all -fno-plt -Og -g -Wall -Wextra -fvar-tracking-assignments -ffunction-sections -pipe -isystem /home/summitadmin/miniconda3/include
+DEBUG_CPPFLAGS=-D_DEBUG -D_FORTIFY_SOURCE=2 -Og -isystem /home/summitadmin/miniconda3/include
+DEBUG_CXXFLAGS=-fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-all -fno-plt -Og -g -Wall -Wextra -fvar-tracking-assignments -ffunction-sections -pipe -isystem /home/summitadmin/miniconda3/include
+DEBUG_FFLAGS=-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/summitadmin/miniconda3/include -I/home/summitadmin/miniconda3/include -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-all -fno-plt -Og -g -Wall -Wextra -fcheck=all -fbacktrace -fimplicit-none -fvar-tracking-assignments -ffunction-sections -pipe
+DEBUG_FORTRANFLAGS=-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/summitadmin/miniconda3/include -I/home/summitadmin/miniconda3/include -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-all -fno-plt -Og -g -Wall -Wextra -fcheck=all -fbacktrace -fimplicit-none -fvar-tracking-assignments -ffunction-sections -pipe
+DISPLAY=:0
+ELFEDIT=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-elfedit
+ENV_METADATA_DIR=/home/summitadmin/bioinformatics_projects/pipelines/bulk_rnaseq/runs/bulk_final_release/run_metadata/environment
+F77=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gfortran
+F90=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gfortran
+F95=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-f95
+FASTP_BIN=/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/fastp
+FC=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gfortran
+FC_FOR_BUILD=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gfortran
+FFLAGS=-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/summitadmin/miniconda3/include -I/home/summitadmin/miniconda3/include
+FORTRANFLAGS=-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/summitadmin/miniconda3/include -I/home/summitadmin/miniconda3/include
+GCC=x86_64-conda-linux-gnu-gcc
+GCC_AR=x86_64-conda-linux-gnu-gcc-ar
+GCC_NM=x86_64-conda-linux-gnu-gcc-nm
+GCC_RANLIB=x86_64-conda-linux-gnu-gcc-ranlib
+GFORTRAN=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gfortran
+GPROF=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-gprof
+GXX=x86_64-conda-linux-gnu-g++
+HOME=/home/summitadmin
+HOST=x86_64-conda-linux-gnu
+HOSTTYPE=x86_64
+LANG=C.UTF-8
+LD=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-ld
+LDFLAGS=-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/summitadmin/miniconda3/lib -Wl,-rpath-link,/home/summitadmin/miniconda3/lib -L/home/summitadmin/miniconda3/lib
+LDFLAGS_LD=-O2 --sort-common --as-needed -z relro -z now --disable-new-dtags --gc-sections --allow-shlib-undefined -rpath /home/summitadmin/miniconda3/lib -rpath-link /home/summitadmin/miniconda3/lib -L/home/summitadmin/miniconda3/lib
+LESSCLOSE=/usr/bin/lesspipe %s %s
+LESSOPEN=| /usr/bin/lesspipe %s
+LOGNAME=summitadmin
+LS_COLORS=rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
+MESON_ARGS=-Dbuildtype=release
+MOTD_SHOWN=update-motd
+NAME=DEL-PYTHONV
+NM=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-nm
+OBJCOPY=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-objcopy
+OBJDUMP=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-objdump
+OLDPWD=/home/summitadmin/bioinformatics_projects/releases/v1.0
+PATH=/home/summitadmin/.local/bin:/home/summitadmin/miniconda3/bin:/home/summitadmin/miniconda3/condabin:/home/summitadmin/sratoolkit.3.3.0-ubuntu64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Windows/system32:/mnt/c/Windows:/mnt/c/Windows/System32/Wbem:/mnt/c/Windows/System32/WindowsPowerShell/v1.0:/mnt/c/Windows/System32/OpenSSH:/mnt/c/Program Files/dotnet:/mnt/c/Users/summitadmin/AppData/Local/Microsoft/WindowsApps:/snap/bin
+PIPELINE_ROOT=/home/summitadmin/bioinformatics_projects/pipelines/bulk_rnaseq
+PIPELINE_SEED=12345
+PULSE_SERVER=unix:/mnt/wslg/PulseServer
+PWD=/home/summitadmin/bioinformatics_projects
+RANLIB=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-ranlib
+READELF=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-readelf
+REPRO_DIR=/home/summitadmin/bioinformatics_projects/pipelines/bulk_rnaseq/runs/bulk_final_release/run_metadata/reproducibility
+RSCRIPT_BIN=/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/Rscript
+RUN_DIR=/home/summitadmin/bioinformatics_projects/pipelines/bulk_rnaseq/runs/bulk_final_release
+RUN_METADATA_DIR=/home/summitadmin/bioinformatics_projects/pipelines/bulk_rnaseq/runs/bulk_final_release/run_metadata
+R_SESSIONS_DIR=/home/summitadmin/bioinformatics_projects/pipelines/bulk_rnaseq/runs/bulk_final_release/run_metadata/r_sessions
+SALMON_BIN=/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/salmon
+SHELL=/bin/bash
+SHLVL=0
+SIZE=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-size
+STAR_BIN=/home/summitadmin/miniconda3/envs/bulk_rnaseq_env/bin/STAR
+STRINGS=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-strings
+STRIP=/home/summitadmin/miniconda3/bin/x86_64-conda-linux-gnu-strip
+TERM=xterm-256color
+USER=summitadmin
+WAYLAND_DISPLAY=wayland-0
+WSL2_GUI_APPS_ENABLED=1
+WSLENV=
+WSL_DISTRO_NAME=Ubuntu-22.04
+WSL_INTEROP=/run/WSL/393_interop
+XDG_DATA_DIRS=/usr/local/share:/usr/share:/var/lib/snapd/desktop
+XDG_RUNTIME_DIR=/run/user/1000/
+_=/usr/bin/env
+_CE_CONDA=
+_CE_M=
+_CONDA_EXE=/home/summitadmin/miniconda3/bin/conda
+_CONDA_ROOT=/home/summitadmin/miniconda3
+build_alias=x86_64-conda-linux-gnu
+host_alias=x86_64-conda-linux-gnu
