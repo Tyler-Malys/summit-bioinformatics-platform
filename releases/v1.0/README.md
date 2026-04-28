@@ -2,6 +2,26 @@
 
 ## Overview
 
+## Production Deployment Context
+
+This release is deployed as a shared, multi-user bioinformatics platform in a Linux environment at:
+
+    /srv/bioinformatics
+
+The deployed system is organized as:
+
+    /srv/bioinformatics/
+      tools/        # Shared Conda environments and supporting software
+      refs/         # Reference genomes and annotations
+      data/         # Shared input datasets
+      pipelines/    # Versioned pipeline releases, including v1.0
+
+Users interact with the system by executing pipelines directly from the shared release directory:
+
+    /srv/bioinformatics/pipelines/v1.0
+
+All documentation and usage examples in this README assume execution within this shared production environment.
+
 This release provides a production-grade bioinformatics pipeline system for processing and analyzing RNA sequencing data, including both bulk RNA-seq and single-cell RNA-seq (scRNA-seq) workflows.
 
 The system is designed for reproducible, configurable, and scalable execution in a research or translational environment. It supports end-to-end processing from raw sequencing data through core analytical outputs, with standardized logging, environment tracking, and restartable execution.
@@ -17,7 +37,7 @@ This release is intended to serve as a stable, shareable reference implementatio
 
 ## What This Release Contains
 
-This release bundle (`v1.0`) provides a complete, self-contained bioinformatics pipeline system for bulk RNA-seq and scRNA-seq workflows.
+This release (`v1.0`) provides a complete, production-grade bioinformatics pipeline system deployed in a shared Linux environment and distributed as a self-contained release bundle for bulk RNA-seq and scRNA-seq workflows.
 
 The top-level structure is organized as follows:
 
@@ -329,7 +349,7 @@ The pipeline system is designed to run in a Linux-based environment with Conda-m
 ### Operating System
 
 - Linux (tested on Ubuntu 22.04)
-- Windows Subsystem for Linux (WSL2) is supported and was used during development and validation
+- Windows Subsystem for Linux (WSL2) is supported for local or development use
 
 ---
 
@@ -449,21 +469,22 @@ All environments are defined in the `envs/` directory and can be recreated using
 
 ## Quick Start
 
-This section provides a minimal workflow to set up the environment and execute the pipelines using the provided release bundle.
+This section provides a minimal workflow to execute the pipelines from the deployed shared v1.0 release.
 
 ### 1. Prepare the environment
 
 Set the release root directory:
 
-    export RELEASE_ROOT=/mnt/c/bioinformatics/pipelines/v1.0
+    export RELEASE_ROOT=/srv/bioinformatics/pipelines/v1.0
     cd $RELEASE_ROOT
 
-Create Conda environments from the provided specifications:
+Use the preconfigured shared Conda environments:
 
-    conda env create -f envs/bulk_rnaseq_env.yml
-    conda env create -f envs/scrnaseq_env.yml
-    conda env create -f envs/scrna_dbl.exported.yml
-    conda env create -f envs/scrnaseq_env_postcore.yml
+    /srv/bioinformatics/tools/
+
+The required environments are already installed and available for use. No environment creation is required.
+
+Ensure that the shared environments are available in your shell environment. Pipeline wrappers will automatically invoke the appropriate environments for each stage.
 
 ### 2. Review configuration
 
