@@ -455,15 +455,14 @@ This section provides a minimal workflow to set up the environment and execute t
 
 Set the release root directory:
 
-    export RELEASE_ROOT=<path_to_release_bundle>
+    export RELEASE_ROOT=/mnt/c/bioinformatics/pipelines/v1.0
     cd $RELEASE_ROOT
 
 Create Conda environments from the provided specifications:
 
     conda env create -f envs/bulk_rnaseq_env.yml
-    conda env create -f envs/bulk_qc_tools.yml
     conda env create -f envs/scrnaseq_env.yml
-    conda env create -f envs/scrna_dbl.yml
+    conda env create -f envs/scrna_dbl.exported.yml
     conda env create -f envs/scrnaseq_env_postcore.yml
 
 ### 2. Review configuration
@@ -478,25 +477,19 @@ Ensure all required variables are defined before execution.
 
 ### 3. Run the bulk RNA-seq pipeline
 
-Navigate to the bulk run directory:
+Use the bulk wrapper script from the release bundle:
 
-    cd $RELEASE_ROOT/bulk/final_run
-
-Execute the wrapper script:
-
-    bash scripts/run_bulk_wrapper_v4.sh --config <config_file>
+    bash $RELEASE_ROOT/scripts/bulk/run_bulk_wrapper_v4.sh --config $RELEASE_ROOT/manifests/validation_bulk_crc_subset.env
 
 ### 4. Run the scRNA-seq pipeline
 
 Cell Ranger backend:
 
-    cd $RELEASE_ROOT/scrna/cellranger_final_run
-    bash scripts/run_scrnaseq_wrapper.sh --config <config_file>
+    bash $RELEASE_ROOT/scripts/scrna/run_scrnaseq_wrapper.sh --config $RELEASE_ROOT/manifests/validation_scrnaseq.env
 
 STARsolo backend:
 
-    cd $RELEASE_ROOT/scrna/starsolo_final_run
-    bash scripts/run_scrnaseq_wrapper.sh --config <config_file>
+    bash $RELEASE_ROOT/scripts/scrna/run_scrnaseq_wrapper.sh --config $RELEASE_ROOT/manifests/validation_scrnaseq_starsolo.env
 
 ### 5. Review outputs and logs
 
